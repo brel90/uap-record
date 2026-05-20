@@ -6,7 +6,7 @@ import { useSearch } from '@/hooks/useSearch'
 import type { EntityWithCount } from '@/hooks/useSearch'
 import { ERA_CONFIG } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
-import type { Event, Entity, EntityType } from '@/lib/types'
+import type { Event, EntityType } from '@/lib/types'
 
 const SUGGESTIONS = [
   'Roswell', 'Luis Elizondo', 'AATIP', 'crash retrieval',
@@ -130,7 +130,7 @@ function EventResult({ event, q }: { event: Event; q: string }) {
               : event.tier === 2
                 ? { background: 'transparent' }
                 : { background: 'transparent', borderColor: `color-mix(in srgb, ${era.color} 30%, transparent)` }),
-          } as React.CSSProperties}
+          } as unknown as React.CSSProperties}
         />
         <span className="rr-aside-label">T{event.tier}</span>
       </div>

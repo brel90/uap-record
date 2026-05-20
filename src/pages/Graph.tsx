@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-// @ts-expect-error — 3d-force-graph is a vanilla ESM package without perfect TS types
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import { Link } from 'react-router-dom'

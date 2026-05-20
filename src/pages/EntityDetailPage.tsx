@@ -29,7 +29,7 @@ export default function EntityDetailPage() {
   const { data, isLoading } = useEntity(id ?? '')
 
   const byEra = useMemo(() => {
-    if (!data) return new Map<Era, typeof data.appearances>()
+    if (!data) return new Map<Era, typeof data?.appearances>()
     const map = new Map<Era, typeof data.appearances>()
     ERA_ORDER.forEach(era => map.set(era, []))
     for (const app of data.appearances) {
@@ -134,7 +134,7 @@ export default function EntityDetailPage() {
                     <span className="en-era-code">{cfg.code}</span>
                     <span className="en-era-label">{cfg.label}</span>
                   </div>
-                  {group.map(app => (
+                  {group.map((app: any) => (
                     <div
                       key={app.event_id}
                       className="en-event-row"

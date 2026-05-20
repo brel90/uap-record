@@ -8,7 +8,7 @@ import './map.css'
 import { useEvents } from '@/hooks/useEvents'
 import { ERA_CONFIG } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
-import type { Era, Event } from '@/lib/types'
+import type { Event } from '@/lib/types'
 
 // ── DoD-confirmed video embeds (youtube-nocookie, no API key needed) ─────────
 
