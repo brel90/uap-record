@@ -24,8 +24,6 @@ export function useEvents(options: UseEventsOptions = {}) {
       if (options.tag) query = query.contains('tags', [options.tag])
 
       const { data, error } = await query
-      console.log('useEvents error:', error)
-      console.log('useEvents data:', data)
       if (error) throw error
       return data ?? []
     },
