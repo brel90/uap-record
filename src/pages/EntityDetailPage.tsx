@@ -29,7 +29,7 @@ export default function EntityDetailPage() {
   const { data, isLoading } = useEntity(id ?? '')
 
   const byEra = useMemo(() => {
-    if (!data) return new Map<Era, typeof data?.appearances>()
+    if (!data) return new Map<Era, NonNullable<typeof data>['appearances']>()
     const map = new Map<Era, typeof data.appearances>()
     ERA_ORDER.forEach(era => map.set(era, []))
     for (const app of data.appearances) {
