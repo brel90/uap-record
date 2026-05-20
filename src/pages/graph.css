@@ -1,0 +1,478 @@
+/* ── Canvas (full bleed) ─────────────────────────────────── */
+
+.graph-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 48px);
+  background: #000008;
+  overflow: hidden;
+}
+
+/* 3d-force-graph starts its internal containers as display:none and shows them
+   on the first animation frame. Override so they're always visible. */
+.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay),
+.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay) > div,
+.graph-canvas-wrap .scene-container {
+  display: block !important;
+}
+
+.graph-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.06em;
+}
+
+/* ── Floating filter panel ───────────────────────────────── */
+
+.gfloat {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  width: 210px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.gfloat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 5, 20, 0.75);
+  border: 1px solid rgba(0, 100, 255, 0.2);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.1s, color 0.1s;
+  width: 100%;
+}
+
+.gfloat-toggle:hover {
+  border-color: rgba(0, 120, 255, 0.45);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.gfloat-toggle svg {
+  flex-shrink: 0;
+}
+
+.gfloat-toggle span:nth-child(2) {
+  flex: 1;
+  text-align: left;
+}
+
+.gfloat-toggle-count {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+}
+
+.gfloat-body {
+  margin-top: 4px;
+  background: rgba(0, 5, 20, 0.75);
+  border: 1px solid rgba(0, 100, 255, 0.2);
+  border-radius: 3px;
+  padding: 14px 0 4px;
+  backdrop-filter: blur(8px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+/* sections inside float */
+.gp-section {
+  padding: 0 14px 14px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  margin-bottom: 14px;
+}
+
+.gp-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.25);
+  margin-bottom: 10px;
+}
+
+.gp-title-code { color: rgba(255, 255, 255, 0.12); font-size: 8px; }
+
+/* connection-type list */
+.ct-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ct-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.60);
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.ct-row:hover { background: rgba(255, 255, 255, 0.03); }
+.ct-row.is-off .ct-label { color: rgba(255, 255, 255, 0.22); }
+
+.ct-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.ct-label { flex: 1; letter-spacing: 0.02em; }
+
+/* toggle */
+.gp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 8px;
+  user-select: none;
+}
+
+.gp-toggle input { display: none; }
+
+.gp-toggle-track {
+  position: relative;
+  width: 22px;
+  height: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.gp-toggle-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 7px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.gp-toggle input:checked + .gp-toggle-track .gp-toggle-thumb {
+  transform: translateX(11px);
+  background: #2a6b4a;
+}
+
+.gp-toggle-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.60);
+}
+
+.gp-kv-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 1px 0;
+}
+
+.gp-kv-k { color: rgba(255, 255, 255, 0.18); }
+.gp-kv-v { color: rgba(255, 255, 255, 0.55); }
+
+/* era legend */
+.era-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.era-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.era-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.era-legend-label { flex: 1; }
+.era-legend-code { color: rgba(255, 255, 255, 0.18); }
+
+/* ── Node detail sheet ───────────────────────────────────── */
+
+.gsheet-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+}
+
+.gsheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  background: rgba(10, 13, 20, 0.97);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 15;
+  animation: gSheetIn 0.16s ease;
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes gSheetIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.gsheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.gsheet-head-l { display: flex; flex-direction: column; gap: 2px; }
+
+.gsheet-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: rgba(255, 255, 255, 0.18);
+}
+
+.gsheet-slug {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.40);
+}
+
+.gsheet-body {
+  padding: 16px 18px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* shared close button */
+.gpr-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.38);
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: color 0.1s, border-color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gpr-close:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* era stripe */
+.gpr-stripe {
+  height: 2px;
+  background: var(--era);
+  box-shadow: 0 0 8px var(--era);
+  flex-shrink: 0;
+}
+
+/* badges */
+.gpr-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+
+.gpr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 2px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.gpr-badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.gpr-badge-tag { color: rgba(255, 255, 255, 0.28); }
+
+.gpr-title {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.gpr-summary {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 20px;
+}
+
+/* connections section */
+.gpr-sec { margin-bottom: 18px; }
+
+.gpr-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.28);
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+}
+
+.gpr-sec-count {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 0 5px;
+}
+
+.gpr-conn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gpr-conn {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.01);
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.gpr-conn:hover {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gpr-conn-head { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+
+.gpr-conn-arrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gpr-conn-type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 2px;
+  padding: 1px 4px;
+}
+
+.gpr-strength { display: flex; gap: 2px; align-items: center; margin-left: auto; }
+
+.gpr-strength-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gpr-conn-title {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.gpr-conn-desc {
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.28);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* actions */
+.gpr-actions { margin-top: 20px; }
+
+.gpr-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  border-radius: 2px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.gpr-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.gpr-btn-primary {
+  border-color: var(--era, rgba(255,255,255,0.15));
+  color: var(--era, rgba(255,255,255,0.6));
+  background: var(--era-tint, transparent);
+}
+
+.gpr-btn-primary:hover {
+  background: color-mix(in oklch, var(--era, #fff) 12%, transparent);
+  color: #fff;
+}

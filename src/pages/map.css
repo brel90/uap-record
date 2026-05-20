@@ -1,0 +1,264 @@
+/* ── Layout ─────────────────────────────────────────────── */
+.map-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #020408;
+}
+
+.map-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* ── Visual evidence filter bar ─────────────────────────── */
+.map-vfilter {
+  background: rgba(2, 4, 8, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.map-vfilter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: transparent;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+
+.map-vfilter-btn:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.map-vfilter-btn.active {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.map-vfilter-count {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.22);
+  transition: color 0.12s;
+}
+
+.map-vfilter-btn.active .map-vfilter-count {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* ── Hover label (inside Three.js Html) ─────────────────── */
+.globe-label {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(13, 31, 45, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(10px, -50%);
+}
+
+/* ── Event detail panel ──────────────────────────────────── */
+.globe-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  background: #131820;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+.globe-panel-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--era);
+  box-shadow: 0 0 10px 0 var(--era);
+}
+
+.globe-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.1s;
+  z-index: 1;
+}
+
+.globe-panel-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Panel image ─────────────────────────────────────────── */
+.globe-panel-image-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  overflow: hidden;
+  background: #0a0d12;
+}
+
+.globe-panel-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.globe-panel-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(10, 15, 25, 0.9) 0%, rgba(5, 8, 18, 0.95) 100%);
+  padding: 16px;
+}
+
+.globe-panel-placeholder-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.2);
+  text-align: center;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.globe-panel-image-cap {
+  padding: 6px 16px 6px 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.2);
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  letter-spacing: 0.02em;
+}
+
+/* ── Panel inner content ─────────────────────────────────── */
+.globe-panel-inner {
+  padding: 14px 16px 16px 20px;
+}
+
+.globe-panel-date {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.28);
+  margin-bottom: 5px;
+  letter-spacing: 0.04em;
+}
+
+.globe-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0 0 10px;
+  line-height: 1.3;
+  padding-right: 20px;
+}
+
+.globe-panel-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+}
+
+.globe-panel-era {
+  border: 1px solid;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.globe-panel-era-label {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.globe-panel-tier {
+  color: rgba(255, 255, 255, 0.2);
+  margin-left: auto;
+}
+
+.globe-panel-sensor {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.globe-panel-summary {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+
+.globe-panel-link {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 5px 10px;
+  transition: color 0.1s, border-color 0.1s, background 0.1s;
+}
+
+.globe-panel-link:hover {
+  color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+}
