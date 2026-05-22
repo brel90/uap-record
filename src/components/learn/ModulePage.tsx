@@ -27,7 +27,6 @@ function markComplete(id: string) {
 
 // ── AI API helpers ─────────────────────────────────────────
 
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
 const MODEL = 'claude-sonnet-4-6'
 
 interface BriefingData {
@@ -42,13 +41,10 @@ function parseJSON(text: string): BriefingData {
 }
 
 async function callAnthropic(system: string, user: string, maxTokens = 1000): Promise<string> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/anthropic', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: MODEL,
