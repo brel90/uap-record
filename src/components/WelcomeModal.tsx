@@ -114,17 +114,21 @@ export default function WelcomeModal() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
+        overflowY: 'auto',
       }}
     >
       <div
         style={{
           maxWidth: 560,
           width: '100%',
+          maxHeight: 'calc(100vh - 48px)',
+          overflowY: 'auto',
           background: 'rgba(0,5,20,0.95)',
           border: '1px solid rgba(0,100,255,0.2)',
           backdropFilter: 'blur(12px)',
-          padding: 48,
+          padding: '36px 40px',
           borderRadius: 4,
+          flexShrink: 0,
         }}
       >
         {/* Top — centered */}
