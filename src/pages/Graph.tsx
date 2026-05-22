@@ -87,96 +87,43 @@ const ERA_ORDER: Era[] = [
 
 function Legend() {
   return (
-    <div
-      className="glegend"
-      style={{
-        position: 'absolute',
-        bottom: 20,
-        left: 16,
-        zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-        pointerEvents: 'none',
-      }}
-    >
+    <div className="glegend">
       {/* Era colors */}
-      <div>
-        <div style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 9,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.2)',
-          marginBottom: 6,
-        }}>
-          Era
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {ERA_ORDER.map(era => {
-            const cfg = ERA_CONFIG[era]
-            return (
-              <div key={era} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
+      <div className="glegend-section">
+        <div className="glegend-heading">Era</div>
+        {ERA_ORDER.map(era => {
+          const cfg = ERA_CONFIG[era]
+          return (
+            <div key={era} className="glegend-row">
+              <span
+                className="glegend-dot"
+                style={{
                   background: ERA_NODE_COLORS[era],
-                  flexShrink: 0,
-                  boxShadow: `0 0 4px ${ERA_NODE_COLORS[era]}`,
-                }} />
-                <span style={{
-                  fontFamily: 'IBM Plex Mono, monospace',
-                  fontSize: 10,
-                  color: 'rgba(255,255,255,0.35)',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {cfg.label}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+                  boxShadow: `0 0 5px ${ERA_NODE_COLORS[era]}`,
+                }}
+              />
+              <span className="glegend-label">{cfg.label}</span>
+            </div>
+          )
+        })}
       </div>
 
       {/* Node size = tier */}
-      <div>
-        <div style={{
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 9,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.2)',
-          marginBottom: 6,
-        }}>
-          Evidence tier
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {([
-            { tier: 1, size: 10, label: 'Tier 1 — confirmed' },
-            { tier: 2, size: 7,  label: 'Tier 2 — credible' },
-            { tier: 3, size: 4,  label: 'Tier 3 — reported' },
-          ] as const).map(({ tier, size, label }) => (
-            <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{
-                width: size,
-                height: size,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.45)',
-                flexShrink: 0,
-                alignSelf: 'center',
-              }} />
-              <span style={{
-                fontFamily: 'IBM Plex Mono, monospace',
-                fontSize: 10,
-                color: 'rgba(255,255,255,0.35)',
-                whiteSpace: 'nowrap',
-              }}>
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="glegend-section">
+        <div className="glegend-heading">Evidence tier</div>
+        {([
+          { tier: 1, size: 10, label: 'Tier 1 — confirmed' },
+          { tier: 2, size: 7,  label: 'Tier 2 — credible' },
+          { tier: 3, size: 4,  label: 'Tier 3 — reported' },
+        ] as const).map(({ tier, size, label }) => (
+          <div key={tier} className="glegend-row">
+            <span
+              className="glegend-dot"
+              style={{ width: size, height: size, background: 'rgba(255,255,255,0.5)' }}
+            />
+            <span className="glegend-label">{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

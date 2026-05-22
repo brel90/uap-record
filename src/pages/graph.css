@@ -200,6 +200,59 @@
 .gp-kv-k { color: rgba(255, 255, 255, 0.18); }
 .gp-kv-v { color: rgba(255, 255, 255, 0.55); }
 
+/* ── Graph legend (bottom-left) ──────────────────────────── */
+
+.glegend {
+  position: absolute;
+  bottom: 20px;
+  left: 16px;
+  z-index: 20;
+  pointer-events: none;
+  display: flex !important;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(0, 5, 20, 0.72);
+  border: 1px solid rgba(0, 100, 255, 0.18);
+  border-radius: 3px;
+  padding: 12px 14px;
+  backdrop-filter: blur(8px);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.glegend-section {
+  display: flex !important;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.glegend-heading {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.22);
+  margin-bottom: 4px;
+}
+
+.glegend-row {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+}
+
+.glegend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block !important;
+}
+
+.glegend-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+}
+
 /* era legend */
 .era-legend {
   list-style: none;
