@@ -14,6 +14,7 @@ export const suppressionRecord: LearningModule = {
     { id: 6, title: 'The Cost of Speaking', eventSlugs: ['witness-retaliation-pattern'], reflectionQuestion: "Careers ended. People were reassigned, ridiculed, threatened. Knowing this — how do you think about the witnesses who spoke anyway?" },
     { id: 7, title: "Even Senators Couldn't Know", eventSlugs: ['congressional-uap-access-denial'], reflectionQuestion: "A former Air Force general and sitting US Senator was told by the Air Force Chief of Staff that he couldn't see certain files. If elected officials with security clearances can't access this — who can?" },
     { id: 8, title: 'The Pattern Continues', eventSlugs: ['aaro-access-complaints'], reflectionQuestion: "The office created specifically to receive disclosures may itself be unable to access what it's supposed to investigate. At what point does a disclosure mechanism become another layer of concealment?" },
+    { id: 9, title: 'Active Obstruction — The CIA Seizes Files (2026)', eventSlugs: ['cia-uap-obstruction-2026'], reflectionQuestion: "A current CIA officer testified that the agency surveilled federal UAP investigators and seized 40 boxes of files from the DNI's declassification office. This isn't history — it happened this month. Does knowing the suppression is still active change how you think about everything else you just read?" },
   ],
   completion: {
     type: 'podcast',

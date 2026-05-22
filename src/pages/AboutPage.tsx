@@ -227,7 +227,7 @@ export default function AboutPage() {
               marginBottom: 10,
               fontStyle: 'italic',
             }}>
-              Where primary sources exist — declassified government documents, congressional records, court filings, official military reports — they are cited directly. Secondary sources are used where primaries are unavailable or incomplete. The index is updated as new materials are released, including ongoing PURSUE tranches.
+              Where primary sources exist — declassified government documents, congressional records, court filings, official military reports — they are cited directly. Secondary sources are used where primaries are unavailable or incomplete. The index is updated as new materials are released. PURSUE Tranche 2 dropped today, May 22, 2026; Tranche 3 is already in processing.
             </p>
             <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: 12, lineHeight: 1.6, fontStyle: 'italic' }}>
               This is a living document. The record is still being written.

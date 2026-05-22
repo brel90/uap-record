@@ -13,7 +13,7 @@ export const disclosureArc: LearningModule = {
     { id: 5, title: "The Government Admits It Doesn't Know", eventSlugs: ['odni-preliminary-assessment'], reflectionQuestion: "The US intelligence community officially stated it cannot explain 143 of 144 military UAP encounters. What do you think the 1 explained case was doing in that report?" },
     { id: 6, title: 'Urgent and Credible', eventSlugs: ['grusch-icig-complaint'], reflectionQuestion: "A former intelligence officer filed a protected complaint alleging crash-retrieval programs exist. The Inspector General called it urgent and credible. What do you think 'credible' means in that specific legal context?" },
     { id: 7, title: 'Under Oath', eventSlugs: ['grusch-testimony'], reflectionQuestion: "Grusch testified under oath. Fravor testified under oath. Graves testified under oath. Under oath means potential perjury charges. Does that change how you weigh what they said?" },
-    { id: 8, title: 'The Record Opens', eventSlugs: ['pursue-uap-files-release'], reflectionQuestion: "The files are opening. What do you think is in the tranches that haven't been released yet?" },
+    { id: 8, title: 'The Record Opens', eventSlugs: ['pursue-uap-files-release', 'pursue-uap-files-release-tranche-2'], reflectionQuestion: "Two tranches down, more coming. The CIA has reportedly seized files from the DNI's own declassification process. What does it mean that the suppression and the disclosure are happening simultaneously?" },
   ],
   completion: {
     type: 'documentary',

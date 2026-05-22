@@ -76,6 +76,7 @@ export const COLLECTIONS: Collection[] = [
   { id: 'congressional',     label: 'Congressional',      filter: { kind: 'tag',  value: 'congressional' } },
   { id: 'pilot_encounter',    label: 'Pilot encounters',   filter: { kind: 'tag',  value: 'pilot_encounter' } },
   { id: 'suppression_record', label: 'Suppression Record', filter: { kind: 'tag',  value: 'suppression_related' } },
+  { id: 'pursue_releases',   label: 'PURSUE Releases',    filter: { kind: 'tag',  value: 'pursue_release' } },
 ]
 
 export const CONNECTION_TYPE_CONFIG: Record<ConnectionType, { label: string; color: string }> = {
