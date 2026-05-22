@@ -10,8 +10,8 @@
 
 /* 3d-force-graph starts its internal containers as display:none and shows them
    on the first animation frame. Override so they're always visible. */
-.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay),
-.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay) > div,
+.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay):not(.glegend),
+.graph-canvas-wrap > div:not(.gfloat):not(.gsheet):not(.gsheet-overlay):not(.glegend) > div,
 .graph-canvas-wrap .scene-container {
   display: block !important;
 }
