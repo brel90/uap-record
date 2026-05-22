@@ -257,11 +257,13 @@ function StationView({ module, station, stationIndex, onContinue }: StationViewP
       .then(data => {
         if (generatingRef.current === key) setBriefing(data)
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        console.error('[Learn] briefing generation failed:', err)
         if (generatingRef.current === key) {
+          const msg = err instanceof Error ? err.message : String(err)
           setBriefing({
-            briefing: `This station covers "${station.title}" in the context of ${module.title}. Add your VITE_ANTHROPIC_API_KEY to enable AI-generated briefings.`,
-            insight: 'AI briefing unavailable — check console for details.',
+            briefing: `Briefing unavailable: ${msg}`,
+            insight: 'Open DevTools → Console for full details.',
           })
         }
       })
@@ -277,8 +279,10 @@ function StationView({ module, station, stationIndex, onContinue }: StationViewP
     try {
       const resp = await generatePersonalResponse(module.title, station, userReflection)
       setPersonalResponse(resp)
-    } catch {
-      setPersonalResponse('Unable to generate response — check your API key.')
+    } catch (err: unknown) {
+      console.error('[Learn] personal response failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      setPersonalResponse(`Unable to generate response: ${msg}`)
     } finally {
       setIsPersonalLoading(false)
     }

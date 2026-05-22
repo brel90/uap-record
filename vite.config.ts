@@ -15,7 +15,7 @@ export default defineConfig({
       '/api/anthropic': {
         target: 'https://api.anthropic.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/anthropic/, ''),
+        rewrite: (path) => path.replace(/^\/api\/anthropic/, '/v1/messages'),
         headers: {
           'anthropic-version': '2023-06-01',
           'x-api-key': process.env.VITE_ANTHROPIC_API_KEY ?? ''
