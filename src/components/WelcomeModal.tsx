@@ -90,17 +90,15 @@ function OptionCard({
 // ── Modal ──────────────────────────────────────────────────
 
 export default function WelcomeModal() {
-  const [visible] = useState(() => !localStorage.getItem(STORAGE_KEY))
+  const [visible, setVisible] = useState(() => !localStorage.getItem(STORAGE_KEY))
   const navigate = useNavigate()
 
   if (!visible) return null
 
   const dismiss = (to: string) => {
     localStorage.setItem(STORAGE_KEY, 'true')
+    setVisible(false)
     navigate(to)
-    // Force re-render by reloading? No — just let the parent
-    // re-render naturally. We keep visible as initialised state;
-    // the component will unmount once the route changes.
   }
 
   return (
