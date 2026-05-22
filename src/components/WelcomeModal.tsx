@@ -91,12 +91,13 @@ function OptionCard({
 
 export default function WelcomeModal() {
   const [visible, setVisible] = useState(() => !localStorage.getItem(STORAGE_KEY))
+  const [dontShow, setDontShow] = useState(false)
   const navigate = useNavigate()
 
   if (!visible) return null
 
   const dismiss = (to: string) => {
-    localStorage.setItem(STORAGE_KEY, 'true')
+    if (dontShow) localStorage.setItem(STORAGE_KEY, 'true')
     setVisible(false)
     navigate(to)
   }
@@ -198,6 +199,35 @@ export default function WelcomeModal() {
             onClick={() => dismiss('/')}
           />
         </div>
+
+        {/* Don't show again */}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 20,
+            cursor: 'pointer',
+            justifyContent: 'center',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={dontShow}
+            onChange={e => setDontShow(e.target.checked)}
+            style={{ accentColor: 'rgba(100,130,200,0.8)', cursor: 'pointer' }}
+          />
+          <span
+            style={{
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.28)',
+              userSelect: 'none',
+            }}
+          >
+            Don't show this again
+          </span>
+        </label>
       </div>
     </div>
   )
