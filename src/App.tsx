@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/useEvents'
 import { COLLECTIONS } from '@/lib/constants'
 import type { Event } from '@/lib/types'
+import WelcomeModal from '@/components/WelcomeModal'
 
 const navItems = [
   { to: '/', label: 'Timeline', icon: Clock, end: true },
@@ -51,6 +52,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden">
+      <WelcomeModal />
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 bg-[#111111] border-r border-white/[0.06] flex flex-col">
         {/* Logo */}
