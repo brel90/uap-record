@@ -528,8 +528,6 @@ export default function Graph() {
           setOpen={setFilterOpen}
         />
 
-        <Legend />
-
         {isLoading && <div className="graph-loading">Loading graph…</div>}
 
         <NodeSheet
@@ -539,6 +537,8 @@ export default function Graph() {
           onClose={() => setSelectedNode(null)}
         />
       </div>
+
+      <Legend />
     </div>
   )
 }
