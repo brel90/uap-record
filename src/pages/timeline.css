@@ -411,3 +411,22 @@
   color: rgba(255, 255, 255, 0.2);
   text-align: center;
 }
+
+/* ── Mobile (< 768px) ─────────────────────────────────────── */
+@media (max-width: 767px) {
+  .tl-filterbar {
+    padding: 8px 14px;
+  }
+
+  .tl-filter-row {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;   /* Firefox */
+    padding-bottom: 2px;     /* space so pills aren't clipped at bottom edge */
+    flex-wrap: nowrap;
+  }
+
+  .tl-filter-row::-webkit-scrollbar {
+    display: none;           /* Chrome / Safari */
+  }
+}
