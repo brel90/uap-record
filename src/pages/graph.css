@@ -213,6 +213,9 @@
   border-radius: 4px;
   padding: 12px 16px;
   min-width: 200px;
+  /* cap height so the toggle button never scrolls off the top */
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
   backdrop-filter: blur(8px);
   font-family: 'IBM Plex Mono', monospace;
   display: flex !important;
@@ -229,6 +232,7 @@
   padding: 0;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
 }
 
 .glegend-title {
@@ -242,6 +246,9 @@
 .glegend-body {
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .glegend-section {
