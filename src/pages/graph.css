@@ -315,6 +315,13 @@
   color: rgba(255, 255, 255, 0.22);
 }
 
+/* ── Mobile: lift legend above bottom nav (56px) ────────── */
+@media (max-width: 767px) {
+  .glegend {
+    bottom: 72px; /* 56px nav + 16px gap */
+  }
+}
+
 /* ── Node detail sheet ───────────────────────────────────── */
 
 .gsheet-overlay {
