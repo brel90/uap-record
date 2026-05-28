@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import { Link } from 'react-router-dom'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useConnections } from '@/hooks/useConnections'
 import type { RawEvent, RawConnection } from '@/hooks/useConnections'
 import { ERA_CONFIG, CONNECTION_TYPE_CONFIG } from '@/lib/constants'
@@ -85,46 +86,68 @@ const ERA_ORDER: Era[] = [
   'post_condon', 'modern_revival', 'disclosure',
 ]
 
+const NAV_HINTS = [
+  ['Left-click + drag', 'Rotate'],
+  ['Scroll', 'Zoom'],
+  ['Right-click + drag', 'Pan'],
+  ['Click a node', 'View details'],
+] as const
+
 function Legend() {
+  const [open, setOpen] = useState(false)
+
   return (
     <div className="glegend">
-      {/* Era colors */}
-      <div className="glegend-section">
-        <div className="glegend-heading">Era</div>
-        {ERA_ORDER.map(era => {
-          const cfg = ERA_CONFIG[era]
-          return (
-            <div key={era} className="glegend-row">
-              <span
-                className="glegend-dot"
-                style={{
-                  background: ERA_NODE_COLORS[era],
-                  boxShadow: `0 0 5px ${ERA_NODE_COLORS[era]}`,
-                }}
-              />
-              <span className="glegend-label">{cfg.label}</span>
-            </div>
-          )
-        })}
-      </div>
+      <button className="glegend-toggle" onClick={() => setOpen(!open)}>
+        <span className="glegend-title">LEGEND</span>
+        {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+      </button>
 
-      {/* Node size = tier */}
-      <div className="glegend-section">
-        <div className="glegend-heading">Evidence tier</div>
-        {([
-          { tier: 1, size: 10, label: 'Tier 1 — confirmed' },
-          { tier: 2, size: 7,  label: 'Tier 2 — credible' },
-          { tier: 3, size: 4,  label: 'Tier 3 — reported' },
-        ] as const).map(({ tier, size, label }) => (
-          <div key={tier} className="glegend-row">
-            <span
-              className="glegend-dot"
-              style={{ width: size, height: size, background: 'rgba(255,255,255,0.5)' }}
-            />
-            <span className="glegend-label">{label}</span>
+      {open && (
+        <div className="glegend-body">
+          {/* Section 1: NODES */}
+          <div className="glegend-section">
+            <div className="glegend-heading">NODES</div>
+            {ERA_ORDER.map(era => (
+              <div key={era} className="glegend-row">
+                <span
+                  className="glegend-dot"
+                  style={{
+                    background: ERA_NODE_COLORS[era],
+                    boxShadow: `0 0 4px ${ERA_NODE_COLORS[era]}`,
+                  }}
+                />
+                <span className="glegend-label">{ERA_CONFIG[era].label}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* Section 2: CONNECTIONS */}
+          <div className="glegend-section">
+            <div className="glegend-heading">CONNECTIONS</div>
+            {CONN_TYPES.map(t => (
+              <div key={t.id} className="glegend-row">
+                <span
+                  className="glegend-line"
+                  style={{ background: CONNECTION_TYPE_CONFIG[t.id].color }}
+                />
+                <span className="glegend-label">{t.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Section 3: HOW TO NAVIGATE */}
+          <div className="glegend-section">
+            <div className="glegend-heading">HOW TO NAVIGATE</div>
+            {NAV_HINTS.map(([action, result]) => (
+              <div key={action} className="glegend-nav-row">
+                <span className="glegend-nav-action">{action}</span>
+                <span className="glegend-nav-result">{result}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

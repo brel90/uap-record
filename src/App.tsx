@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
-import { Clock, Map, GitFork, Search, Info, GraduationCap } from 'lucide-react'
+import { Clock, Map, GitFork, Search, Info, GraduationCap, Globe, Network, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/useEvents'
 import { COLLECTIONS } from '@/lib/constants'
@@ -12,6 +12,14 @@ const navItems = [
   { to: '/map', label: 'Map', icon: Map, end: false },
   { to: '/graph', label: 'Graph', icon: GitFork, end: false },
   { to: '/learn', label: 'Learn', icon: GraduationCap, end: false },
+  { to: '/search', label: 'Search', icon: Search, end: false },
+]
+
+const mobileNavItems = [
+  { to: '/', label: 'Timeline', icon: Clock, end: true },
+  { to: '/map', label: 'Map', icon: Globe, end: false },
+  { to: '/graph', label: 'Graph', icon: Network, end: false },
+  { to: '/learn', label: 'Learn', icon: BookOpen, end: false },
   { to: '/search', label: 'Search', icon: Search, end: false },
 ]
 
@@ -53,8 +61,14 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden">
       <WelcomeModal />
-      {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 bg-[#111111] border-r border-white/[0.06] flex flex-col">
+
+      {/* Mobile header — only on small screens */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-10 bg-[#0a0a0f] border-b border-white/10 flex items-center justify-center flex-shrink-0">
+        <span className="text-[10px] font-mono tracking-[0.2em] text-white/40 uppercase">UAP RECORD</span>
+      </div>
+
+      {/* Sidebar — hidden on mobile */}
+      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-[#111111] border-r border-white/[0.06]">
         {/* Logo */}
         <div className="px-5 py-[18px] border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
@@ -174,9 +188,29 @@ export default function App() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="flex-1 overflow-hidden flex flex-col pt-10 md:pt-0 pb-14 md:pb-0">
         <Outlet />
       </main>
+
+      {/* Mobile bottom nav — only on small screens */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f] border-t border-white/10 h-14 flex items-center">
+        {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              cn(
+                'flex-1 flex flex-col items-center justify-center gap-1 h-full transition-colors',
+                isActive ? 'text-emerald-400' : 'text-white/30',
+              )
+            }
+          >
+            <Icon className="w-5 h-5" />
+            <span className="text-xs font-mono tracking-wide">{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
