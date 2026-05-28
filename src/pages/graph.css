@@ -315,10 +315,12 @@
   color: rgba(255, 255, 255, 0.22);
 }
 
-/* ── Mobile: lift legend above bottom nav (56px) ────────── */
+/* ── Mobile: lift above bottom nav, cap height to keep toggle visible ── */
 @media (max-width: 767px) {
   .glegend {
     bottom: 72px; /* 56px nav + 16px gap */
+    /* toggle sits at viewport_top + (128px - 72px) = 56px — just below the 40px header */
+    max-height: calc(100vh - 128px);
   }
 }
 
