@@ -296,7 +296,7 @@ export default function EventDetail() {
 
       {/* Scrollable content */}
       <div className="tl-content">
-        <div className="px-7 pt-4 pb-0">
+        <div className="px-4 md:px-7 pt-4 pb-0">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm"

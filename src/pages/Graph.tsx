@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import { Link } from 'react-router-dom'
@@ -95,16 +96,55 @@ const NAV_HINTS = [
 
 function Legend() {
   const [open, setOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768,
+  )
 
-  return (
-    <div className="glegend">
+  // Keep isMobile in sync when orientation / window size changes
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  // Inline styles for mobile — these win over every CSS rule, bypassing all
+  // cascade / specificity / media-query reliability issues on mobile browsers.
+  const panelStyle: React.CSSProperties | undefined = isMobile
+    ? {
+        // Anchor to bottom-right above the 56px nav bar.
+        // Using JS-driven inline styles instead of CSS @media so there is no
+        // question about what's applied — inline always wins the cascade.
+        bottom: '72px',
+        top: 'auto',
+        right: '16px',
+        maxHeight: 'none',  // parent never height-constrains; body does instead
+        overflow: 'visible',
+      }
+    : undefined
+
+  const bodyStyle: React.CSSProperties | undefined = isMobile
+    ? {
+        // Explicit fixed height so the panel's total size is always predictable:
+        // padding(24) + toggle(~20) + body(180) = ~224px, well within any screen.
+        flex: 'none',
+        height: '180px',
+        overflowY: 'scroll',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        WebkitOverflowScrolling: 'touch' as any,
+        overscrollBehavior: 'contain',
+        minHeight: 0,
+      }
+    : undefined
+
+  return createPortal(
+    <div className="glegend" style={panelStyle}>
       <button className="glegend-toggle" onClick={() => setOpen(!open)}>
         <span className="glegend-title">LEGEND</span>
         {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
       </button>
 
       {open && (
-        <div className="glegend-body">
+        <div className="glegend-body" style={bodyStyle}>
           {/* Section 1: NODES */}
           <div className="glegend-section">
             <div className="glegend-heading">NODES</div>
@@ -148,7 +188,8 @@ function Legend() {
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
 

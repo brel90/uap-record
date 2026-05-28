@@ -689,6 +689,17 @@
     gap: 10px 16px;
   }
 
+  /* Prevent grid cells from overflowing — min-width:auto is the default
+     in CSS Grid which lets content bust out of the cell */
+  .ed-kv {
+    min-width: 0;
+  }
+
+  .ed-kv-v {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
   /* Body: reduce padding (grid already collapses at 1180px) */
   .ed-body {
     padding: 20px 16px 60px;

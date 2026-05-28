@@ -213,7 +213,6 @@
   border-radius: 4px;
   padding: 12px 16px;
   min-width: 200px;
-  /* cap height so the toggle button never scrolls off the top */
   max-height: calc(100vh - 80px);
   overflow: hidden;
   backdrop-filter: blur(8px);
@@ -315,12 +314,22 @@
   color: rgba(255, 255, 255, 0.22);
 }
 
-/* ── Mobile: lift above bottom nav, cap height to keep toggle visible ── */
+/* ── Mobile — positioning driven by JS inline styles in Legend component ── */
+/* These CSS rules are a fallback only; the React component applies inline    */
+/* styles that always win the cascade, bypassing all media-query quirks.      */
 @media (max-width: 767px) {
   .glegend {
-    bottom: 72px; /* 56px nav + 16px gap */
-    /* toggle sits at viewport_top + (128px - 72px) = 56px — just below the 40px header */
-    max-height: calc(100vh - 128px);
+    bottom: 72px;
+    top: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .glegend-body {
+    flex: none;
+    height: 180px;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 
