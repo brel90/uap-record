@@ -144,10 +144,31 @@ RULES:
           }),
         })
 
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error ?? `API error ${response.status}`)
+        // response.json() can throw SyntaxError if the endpoint returned HTML
+        // (e.g. the SPA rewrite intercepted /api/anthropic).
+        let data: Record<string, unknown>
+        try {
+          data = await response.json()
+        } catch {
+          throw new Error(
+            `Could not parse response from /api/anthropic (status ${response.status}). ` +
+            `The proxy may not be deployed or the SPA rewrite is intercepting it.`,
+          )
+        }
 
-        const rawText: string = data.content[0].text
+        if (!response.ok) {
+          // Anthropic errors come back as { type, error: { type, message } }
+          // Our own proxy errors come back as { error: "string" }
+          const anthropicMsg =
+            typeof data.error === 'object' && data.error !== null
+              ? (data.error as Record<string, unknown>).message
+              : data.error
+          throw new Error(
+            String(anthropicMsg ?? `API error ${response.status}: ${JSON.stringify(data)}`),
+          )
+        }
+
+        const rawText: string = (data.content as Array<{text: string}>)[0].text
         const citations = parseCitations(rawText, allEvents ?? [])
         const cleanText = cleanResponse(rawText)
 
@@ -161,14 +182,14 @@ RULES:
           },
         ])
       } catch (err) {
-        console.error('[Archivist] error:', err)
+        const errMsg = err instanceof Error ? err.message : String(err)
+        console.error('[Archivist] error:', errMsg)
         setMessages(prev => [
           ...prev,
           {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content:
-              'I encountered an error retrieving information from the record. Please try again.',
+            content: `Error: ${errMsg}`,
           },
         ])
       } finally {
