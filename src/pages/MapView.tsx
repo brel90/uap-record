@@ -51,43 +51,46 @@ function isSensorConfirmed(event: Event): boolean {
 // ── Graticule ─────────────────────────────────────────────
 
 function buildGraticuleLines(): THREE.Line[] {
-  const mat = new THREE.LineBasicMaterial({
-    color: new THREE.Color('#0d2d40'),
+  const material = new THREE.LineBasicMaterial({
+    color: '#1a3a5a',
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.5,
     depthWrite: false,
   })
   const lines: THREE.Line[] = []
-  for (let lat = -60; lat <= 60; lat += 30) {
-    const pts: number[] = []
-    for (let i = 0; i <= 360; i += 2) {
+
+  // Latitude lines every 30 degrees
+  ;[-60, -30, 0, 30, 60].forEach(lat => {
+    const points: THREE.Vector3[] = []
+    for (let lon = 0; lon <= 360; lon += 2) {
       const phi = (90 - lat) * (Math.PI / 180)
-      const theta = i * (Math.PI / 180)
-      pts.push(
-        Math.sin(phi) * Math.cos(theta) * 1.001,
-        Math.cos(phi) * 1.001,
-        Math.sin(phi) * Math.sin(theta) * 1.001,
-      )
-    }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-    lines.push(new THREE.Line(geo, mat))
-  }
-  for (let lon = 0; lon < 360; lon += 30) {
-    const pts: number[] = []
-    for (let i = 0; i <= 180; i += 2) {
-      const phi = i * (Math.PI / 180)
       const theta = lon * (Math.PI / 180)
-      pts.push(
-        Math.sin(phi) * Math.cos(theta) * 1.001,
-        Math.cos(phi) * 1.001,
-        Math.sin(phi) * Math.sin(theta) * 1.001,
-      )
+      points.push(new THREE.Vector3(
+        -1.001 * Math.sin(phi) * Math.cos(theta),
+        1.001 * Math.cos(phi),
+        1.001 * Math.sin(phi) * Math.sin(theta),
+      ))
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-    lines.push(new THREE.Line(geo, mat))
+    const geometry = new THREE.BufferGeometry().setFromPoints(points)
+    lines.push(new THREE.Line(geometry, material))
+  })
+
+  // Longitude lines every 30 degrees
+  for (let lon = 0; lon < 360; lon += 30) {
+    const points: THREE.Vector3[] = []
+    for (let lat = -90; lat <= 90; lat += 2) {
+      const phi = (90 - lat) * (Math.PI / 180)
+      const theta = lon * (Math.PI / 180)
+      points.push(new THREE.Vector3(
+        -1.001 * Math.sin(phi) * Math.cos(theta),
+        1.001 * Math.cos(phi),
+        1.001 * Math.sin(phi) * Math.sin(theta),
+      ))
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints(points)
+    lines.push(new THREE.Line(geometry, material))
   }
+
   return lines
 }
 
@@ -140,7 +143,7 @@ function Globe() {
     <group>
       <mesh>
         <sphereGeometry args={[1, 64, 64]} />
-        <meshPhongMaterial color="#020d1a" specular="#1a4a6a" shininess={15} />
+        <meshPhongMaterial color="#0a1628" emissive="#0a1628" emissiveIntensity={0.15} specular="#1a4a6a" shininess={10} />
       </mesh>
       <Graticule />
       {continentGeo && (
