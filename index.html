@@ -11,6 +11,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Static portal target for the Graph legend. Lives outside #root so it
+         is never clipped by any overflow:hidden ancestor. React portals content
+         here and cleans it up reliably when the Legend component unmounts. -->
+    <div id="legend-portal"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

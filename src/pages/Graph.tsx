@@ -94,19 +94,12 @@ interface LegendProps {
 }
 
 function Legend({ open, setOpen }: LegendProps) {
-  // Create a dedicated body-level container and explicitly remove it on unmount.
-  // This guarantees no portal DOM nodes linger when navigating away from Graph,
-  // even if React's own portal teardown is delayed during concurrent rendering.
-  const [container, setContainer] = useState<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const el = document.createElement('div')
-    document.body.appendChild(el)
-    setContainer(el)
-    return () => {
-      if (document.body.contains(el)) document.body.removeChild(el)
-    }
-  }, [])
+  // Use the static #legend-portal div in index.html as the portal target.
+  // It lives outside #root (and outside every overflow:hidden ancestor), so
+  // position:fixed children render relative to the viewport on all browsers.
+  // React portals into it and removes the content when Legend unmounts —
+  // no dynamic container lifecycle needed.
+  const portal = document.getElementById('legend-portal')
 
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768,
@@ -148,8 +141,7 @@ function Legend({ open, setOpen }: LegendProps) {
       }
     : undefined
 
-  // Don't render until the container exists in the DOM
-  if (!container) return null
+  if (!portal) return null
 
   return createPortal(
     <div className="glegend" style={panelStyle}>
@@ -194,7 +186,7 @@ function Legend({ open, setOpen }: LegendProps) {
         </div>
       )}
     </div>,
-    container,
+    portal,
   )
 }
 
