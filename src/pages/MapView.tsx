@@ -118,38 +118,58 @@ function geomToSegments(geom: any, out: number[], r: number) {
   else if (geom.type === 'GeometryCollection') for (const g of geom.geometries) geomToSegments(g, out, r)
 }
 
+interface ContinentGeos {
+  lineGeo: THREE.BufferGeometry
+  glowGeo: THREE.BufferGeometry
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildContinentGeo(topo: any): THREE.BufferGeometry {
+function buildContinentGeos(topo: any): ContinentGeos {
   const land = topojson.feature(topo, topo.objects.land) as any // eslint-disable-line @typescript-eslint/no-explicit-any
-  const positions: number[] = []
+  const linePositions: number[] = []
+  const glowPositions: number[] = []
   const features = land.features ?? [land]
-  for (const f of features) geomToSegments(f.geometry, positions, 1.002)
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  return geo
+  for (const f of features) {
+    geomToSegments(f.geometry, linePositions, 1.006) // continent lines — lifted above glow
+    geomToSegments(f.geometry, glowPositions, 1.003) // glow layer — between graticule and lines
+  }
+  const lineGeo = new THREE.BufferGeometry()
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3))
+  const glowGeo = new THREE.BufferGeometry()
+  glowGeo.setAttribute('position', new THREE.Float32BufferAttribute(glowPositions, 3))
+  return { lineGeo, glowGeo }
 }
 
 // ── Globe ─────────────────────────────────────────────────
 
 function Globe() {
-  const [continentGeo, setContinentGeo] = useState<THREE.BufferGeometry | null>(null)
+  const [continentGeos, setContinentGeos] = useState<ContinentGeos | null>(null)
   useEffect(() => {
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
       .then(r => r.json())
-      .then(topo => setContinentGeo(buildContinentGeo(topo)))
+      .then(topo => setContinentGeos(buildContinentGeos(topo)))
       .catch(() => {})
   }, [])
   return (
     <group>
+      {/* Layer 1 — globe sphere (r=1.0) */}
       <mesh>
         <sphereGeometry args={[1, 64, 64]} />
         <meshPhongMaterial color="#112244" emissive="#112244" emissiveIntensity={0.25} specular="#2a6a9a" shininess={12} />
       </mesh>
+      {/* Layer 2 — graticule grid lines (r=1.001) */}
       <Graticule />
-      {continentGeo && (
-        <lineSegments geometry={continentGeo}>
-          <lineBasicMaterial color="#2a5a7a" transparent opacity={0.9} depthWrite={false} />
-        </lineSegments>
+      {continentGeos && (
+        <>
+          {/* Layer 3 — continent glow (r=1.003): faint blue halo beneath outlines */}
+          <lineSegments geometry={continentGeos.glowGeo}>
+            <lineBasicMaterial color="#1a4a7a" transparent opacity={0.15} linewidth={2} depthWrite={false} />
+          </lineSegments>
+          {/* Layer 4 — continent outlines (r=1.006): lifted above glow for floating effect */}
+          <lineSegments geometry={continentGeos.lineGeo}>
+            <lineBasicMaterial color="#2a5a7a" transparent opacity={0.9} depthWrite={false} />
+          </lineSegments>
+        </>
       )}
     </group>
   )
