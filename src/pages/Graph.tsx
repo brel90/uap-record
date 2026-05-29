@@ -87,12 +87,6 @@ const ERA_ORDER: Era[] = [
   'post_condon', 'modern_revival', 'disclosure',
 ]
 
-const NAV_HINTS = [
-  ['Left-click + drag', 'Rotate'],
-  ['Scroll', 'Zoom'],
-  ['Right-click + drag', 'Pan'],
-  ['Click a node', 'View details'],
-] as const
 
 function Legend() {
   const [open, setOpen] = useState(false)
@@ -176,16 +170,6 @@ function Legend() {
             ))}
           </div>
 
-          {/* Section 3: HOW TO NAVIGATE */}
-          <div className="glegend-section">
-            <div className="glegend-heading">HOW TO NAVIGATE</div>
-            {NAV_HINTS.map(([action, result]) => (
-              <div key={action} className="glegend-nav-row">
-                <span className="glegend-nav-action">{action}</span>
-                <span className="glegend-nav-result">{result}</span>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>,
@@ -482,15 +466,6 @@ export default function Graph() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Graph.graphData().nodes.forEach((n: any) => { n.vz += (Math.random() - 0.5) * 0.1 })
     })
-
-    // Hide nav hint text — fallback in case showNavInfo isn't available in this build
-    setTimeout(() => {
-      el.querySelectorAll('div').forEach(d => {
-        if (d.textContent?.includes('Left-click: rotate')) {
-          d.style.display = 'none'
-        }
-      })
-    }, 500)
 
     // Lighting
     const scene = Graph.scene()

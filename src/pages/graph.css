@@ -295,24 +295,6 @@
   white-space: nowrap;
 }
 
-.glegend-nav-row {
-  display: flex !important;
-  gap: 8px;
-  align-items: baseline;
-  padding: 1px 0;
-}
-
-.glegend-nav-action {
-  font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.45);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.glegend-nav-result {
-  font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.22);
-}
 
 /* ── Mobile — positioning driven by JS inline styles in Legend component ── */
 /* These CSS rules are a fallback only; the React component applies inline    */
