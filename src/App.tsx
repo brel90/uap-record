@@ -22,6 +22,7 @@ const mobileNavItems = [
   { to: '/graph', label: 'Graph', icon: Network, end: false },
   { to: '/learn', label: 'Learn', icon: BookOpen, end: false },
   { to: '/search', label: 'Search', icon: Search, end: false },
+  { to: '/about', label: 'About', icon: Info, end: false },
 ]
 
 function matchesCollection(e: Event, id: string): boolean {
@@ -196,21 +197,46 @@ export default function App() {
         <Outlet />
       </main>
 
-      {/* Mobile bottom nav — only on small screens */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0f] border-t border-white/10 h-14 flex items-center">
+      {/* Mobile bottom nav — only on small screens, horizontally scrollable */}
+      <nav
+        className="md:hidden mob-nav"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: '#0a0a0f',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'none',
+        }}
+      >
         {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex-1 flex flex-col items-center justify-center gap-1 h-full transition-colors',
-                isActive ? 'text-emerald-400' : 'text-white/30',
-              )
-            }
+            style={({ isActive }) => ({
+              flex: '0 0 auto',
+              minWidth: 64,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              height: '100%',
+              padding: '0 14px',
+              color: isActive ? '#34d399' : 'rgba(255,255,255,0.3)',
+              textDecoration: 'none',
+              transition: 'color 0.15s',
+            })}
           >
-            <Icon className="w-5 h-5" />
+            <Icon style={{ width: 20, height: 20 }} />
             <span className="text-xs font-mono tracking-wide">{label}</span>
           </NavLink>
         ))}

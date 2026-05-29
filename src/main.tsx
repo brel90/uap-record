@@ -11,6 +11,7 @@ import Search from './pages/Search.tsx'
 import EventDetail from './pages/EventDetail.tsx'
 import EntityDetailPage from './pages/EntityDetailPage.tsx'
 import AboutPage from './pages/AboutPage.tsx'
+import TermsPage from './pages/TermsPage.tsx'
 import LearnPage from './pages/LearnPage.tsx'
 import ModulePage from './components/learn/ModulePage.tsx'
 
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="event/:slug" element={<EventDetail />} />
             <Route path="entity/:id" element={<EntityDetailPage />} />
             <Route path="about" element={<AboutPage />} />
+            <Route path="terms" element={<TermsPage />} />
             <Route path="learn" element={<LearnPage />} />
             <Route path="learn/:moduleId" element={<ModulePage />} />
           </Route>

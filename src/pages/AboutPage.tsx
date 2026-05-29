@@ -234,6 +234,25 @@ export default function AboutPage() {
             </p>
           </div>
 
+          {/* Terms link */}
+          <div style={{ marginTop: 32, textAlign: 'center' }}>
+            <Link
+              to="/terms"
+              style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.2)',
+                textDecoration: 'none',
+                letterSpacing: '0.1em',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.2)')}
+            >
+              Terms of Use
+            </Link>
+          </div>
+
         </div>
       </div>
     </div>

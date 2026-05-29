@@ -1,3 +1,8 @@
+/* Mobile nav scrollbar — hidden on webkit (Firefox uses scrollbarWidth:none inline) */
+.mob-nav::-webkit-scrollbar {
+  display: none;
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;
