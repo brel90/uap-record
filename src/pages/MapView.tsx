@@ -59,8 +59,8 @@ function buildGraticuleLines(): THREE.Line[] {
   })
   const lines: THREE.Line[] = []
 
-  // Latitude lines every 30 degrees
-  ;[-60, -30, 0, 30, 60].forEach(lat => {
+  // Latitude lines every 15 degrees
+  ;[-75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75].forEach(lat => {
     const points: THREE.Vector3[] = []
     for (let lon = 0; lon <= 360; lon += 2) {
       const phi = (90 - lat) * (Math.PI / 180)
@@ -75,8 +75,8 @@ function buildGraticuleLines(): THREE.Line[] {
     lines.push(new THREE.Line(geometry, material))
   })
 
-  // Longitude lines every 30 degrees
-  for (let lon = 0; lon < 360; lon += 30) {
+  // Longitude lines every 15 degrees
+  for (let lon = 0; lon < 360; lon += 15) {
     const points: THREE.Vector3[] = []
     for (let lat = -90; lat <= 90; lat += 2) {
       const phi = (90 - lat) * (Math.PI / 180)
@@ -143,7 +143,7 @@ function Globe() {
     <group>
       <mesh>
         <sphereGeometry args={[1, 64, 64]} />
-        <meshPhongMaterial color="#0a1628" emissive="#0a1628" emissiveIntensity={0.15} specular="#1a4a6a" shininess={10} />
+        <meshPhongMaterial color="#112244" emissive="#112244" emissiveIntensity={0.25} specular="#2a6a9a" shininess={12} />
       </mesh>
       <Graticule />
       {continentGeo && (
