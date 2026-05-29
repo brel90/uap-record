@@ -88,8 +88,26 @@ const ERA_ORDER: Era[] = [
 ]
 
 
-function Legend() {
-  const [open, setOpen] = useState(false)
+interface LegendProps {
+  open: boolean
+  setOpen: (v: boolean) => void
+}
+
+function Legend({ open, setOpen }: LegendProps) {
+  // Create a dedicated body-level container and explicitly remove it on unmount.
+  // This guarantees no portal DOM nodes linger when navigating away from Graph,
+  // even if React's own portal teardown is delayed during concurrent rendering.
+  const [container, setContainer] = useState<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+    setContainer(el)
+    return () => {
+      if (document.body.contains(el)) document.body.removeChild(el)
+    }
+  }, [])
+
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 768,
   )
@@ -129,6 +147,9 @@ function Legend() {
         minHeight: 0,
       }
     : undefined
+
+  // Don't render until the container exists in the DOM
+  if (!container) return null
 
   return createPortal(
     <div className="glegend" style={panelStyle}>
@@ -173,7 +194,7 @@ function Legend() {
         </div>
       )}
     </div>,
-    document.body,
+    container,
   )
 }
 
@@ -373,12 +394,20 @@ export default function Graph() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null)
 
+  const [legendOpen, setLegendOpen] = useState(false) // always starts closed
   const [selectedNode, setSelectedNode] = useState<GNode | null>(null)
   const [activeTypes, setActiveTypes] = useState<Set<ConnectionType>>(
     new Set(CONN_TYPES.map(t => t.id))
   )
   const [showSubs, setShowSubs] = useState(false)
   const [filterOpen, setFilterOpen] = useState(true)
+
+  // Reset legend state on unmount so it never bleeds into other pages
+  useEffect(() => {
+    return () => {
+      setLegendOpen(false)
+    }
+  }, [])
 
   const { data, isLoading } = useConnections()
   const allEvents: RawEvent[] = data?.events ?? []
@@ -554,7 +583,7 @@ export default function Graph() {
         />
       </div>
 
-      <Legend />
+      <Legend open={legendOpen} setOpen={setLegendOpen} />
     </div>
   )
 }
