@@ -1,0 +1,100 @@
+/* ── Backdrop ───────────────────────────────────────────────── */
+
+.archivist-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.45);
+  animation: archivistFadeIn 0.18s ease;
+}
+
+/* ── Drawer ─────────────────────────────────────────────────── */
+
+.archivist-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: 100vh;
+  z-index: 100;
+  background: rgba(0, 5, 20, 0.97);
+  border-left: 1px solid rgba(0, 100, 255, 0.2);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  animation: archivistSlideInRight 0.2s ease;
+}
+
+@media (max-width: 767px) {
+  .archivist-drawer {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 88vh;
+    border-left: none;
+    border-top: 1px solid rgba(0, 100, 255, 0.2);
+    border-radius: 14px 14px 0 0;
+    animation: archivistSlideInUp 0.22s ease;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+
+@keyframes archivistFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes archivistSlideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes archivistSlideInUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* Used by the loading indicator dots */
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50%       { opacity: 0.85; transform: scale(1.15); }
+}
+
+/* ── Scrollbar styling ──────────────────────────────────────── */
+
+.archivist-messages::-webkit-scrollbar {
+  width: 4px;
+}
+.archivist-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+.archivist-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+.archivist-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Suggested question chip hover ─────────────────────────── */
+
+.archivist-suggestion:hover {
+  border-color: rgba(0, 100, 255, 0.3) !important;
+  background: rgba(0, 50, 120, 0.15) !important;
+  color: #cbd5e1 !important;
+}
+
+/* ── Citation pill hover ────────────────────────────────────── */
+
+.archivist-citation:hover {
+  filter: brightness(1.25);
+}
+
+/* ── Textarea focus ─────────────────────────────────────────── */
+
+.archivist-input:focus {
+  border-color: rgba(0, 100, 255, 0.35) !important;
+}

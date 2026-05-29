@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
-import { Clock, Map, GitFork, Search, Info, GraduationCap, Globe, Network, BookOpen } from 'lucide-react'
+import { Clock, Map, GitFork, Search, Info, GraduationCap, Globe, Network, BookOpen, Archive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/useEvents'
 import { COLLECTIONS } from '@/lib/constants'
 import type { Event } from '@/lib/types'
 import WelcomeModal from '@/components/WelcomeModal'
+import Archivist from '@/components/Archivist'
 
 const navItems = [
   { to: '/', label: 'Timeline', icon: Clock, end: true },
@@ -37,6 +38,7 @@ export default function App() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const activeCollection = searchParams.get('collection')
+  const [archivistOpen, setArchivistOpen] = useState(false)
 
   // Full event list for counting — cached, shares query key with Timeline's unfiltered call
   const { data: allEvents = [] } = useEvents()
@@ -211,6 +213,39 @@ export default function App() {
           </NavLink>
         ))}
       </nav>
+
+      {/* ── The Archivist ─────────────────────────────────────── */}
+
+      {/* Floating trigger button — hidden while drawer is open, sits above
+          the mobile bottom nav (bottom-20 = 80px > nav height 56px) */}
+      {!archivistOpen && (
+        <button
+          onClick={() => setArchivistOpen(true)}
+          className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full text-sm font-mono tracking-wider transition-all"
+          style={{
+            background: 'rgba(0,5,20,0.9)',
+            border: '1px solid rgba(0,100,255,0.4)',
+            color: '#94a3b8',
+            backdropFilter: 'blur(8px)',
+          }}
+          onMouseEnter={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,100,255,0.7)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#cbd5e1'
+          }}
+          onMouseLeave={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,100,255,0.4)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'
+          }}
+        >
+          <Archive size={14} />
+          THE ARCHIVIST
+        </button>
+      )}
+
+      {/* Drawer — conditionally mounted; state resets fresh on each open */}
+      {archivistOpen && (
+        <Archivist onClose={() => setArchivistOpen(false)} />
+      )}
     </div>
   )
 }
