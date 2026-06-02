@@ -47,6 +47,18 @@ function EntIcon({ type }: { type: EntityType }) {
 }
 
 // ── Sources card ───────────────────────────────────────────
+function getFallbackUrl(source: Source): string | null {
+  const text = (source.label + ' ' + (source.notes ?? '')).toLowerCase()
+  if (text.includes('national archives') || text.includes('nara')) return 'https://www.archives.gov/research/military/air-force/ufos'
+  if (text.includes('cia')) return 'https://www.cia.gov/readingroom/'
+  if (text.includes('congress') || text.includes('congressional')) return 'https://www.congress.gov'
+  if (text.includes('aaro')) return 'https://aaro.mil'
+  if (text.includes('dni') || text.includes('odni')) return 'https://www.dni.gov'
+  if (text.includes('house oversight')) return 'https://oversight.house.gov'
+  if (text.includes('department of war') || text.includes('war department')) return 'https://www.archives.gov/research/military'
+  return null
+}
+
 function SourcesCard({ sources }: { sources: Source[] }) {
   const grouped: Record<number, Source[]> = {}
   sources.forEach(s => {
@@ -76,26 +88,58 @@ function SourcesCard({ sources }: { sources: Source[] }) {
                 <span className="src-tier-n">· {list.length}</span>
               </div>
               <ul className="src-list">
-                {list.map(s => (
-                  <li key={s.id} className="src-row">
-                    {s.url ? (
-                      <a className="src-link" href={s.url} target="_blank" rel="noreferrer">
-                        <span>{s.label}</span>
-                        <ExternalLink size={11} className="src-link-icon" />
-                      </a>
-                    ) : (
-                      <div className="src-link" style={{ cursor: 'default' }}>
-                        <span>{s.label}</span>
-                      </div>
-                    )}
-                    <div className="src-meta">
-                      {s.authors && <span>{s.authors.join(', ')}</span>}
-                      {s.authors && s.publication_year && <span className="src-sep">·</span>}
-                      {s.publication_year && <span>{s.publication_year}</span>}
-                      {s.notes && <><span className="src-sep">·</span><span>{s.notes}</span></>}
-                    </div>
-                  </li>
-                ))}
+                {list.map(s => {
+                  const fallbackUrl = !s.url ? getFallbackUrl(s) : null
+                  const effectiveUrl = s.url ?? fallbackUrl
+                  const isFallback = !s.url && !!fallbackUrl
+                  const metaParts = [
+                    s.authors?.join(', '),
+                    s.publication_year?.toString(),
+                  ].filter(Boolean)
+
+                  return (
+                    <li key={s.id} className="src-row">
+                      {effectiveUrl ? (
+                        <a
+                          className="src-link"
+                          href={effectiveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: isFallback ? '#64748b' : undefined }}
+                        >
+                          <span>{s.label}</span>
+                          <ExternalLink size={11} className="src-link-icon" />
+                          {isFallback && (
+                            <span style={{ fontSize: 10, opacity: 0.55, fontStyle: 'italic', marginLeft: 3 }}>
+                              (source archive)
+                            </span>
+                          )}
+                        </a>
+                      ) : (
+                        <span className="src-link" style={{ color: '#64748b', cursor: 'default' }}>
+                          {s.label}
+                        </span>
+                      )}
+
+                      {metaParts.length > 0 && (
+                        <div className="src-meta" style={{ marginTop: 2 }}>
+                          {metaParts.map((part, i) => (
+                            <span key={i}>
+                              {i > 0 && <span className="src-sep">·</span>}
+                              {part}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {s.notes && (
+                        <div className="src-meta" style={{ marginTop: 2, fontStyle: 'italic', opacity: 0.7 }}>
+                          {s.notes}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )
