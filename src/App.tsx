@@ -198,8 +198,9 @@ export default function App() {
       </main>
 
       {/* Mobile bottom nav — only on small screens, horizontally scrollable */}
+      <div className="md:hidden">
       <nav
-        className="md:hidden mob-nav"
+        className="mob-nav"
         style={{
           position: 'fixed',
           bottom: 0,
@@ -241,6 +242,7 @@ export default function App() {
           </NavLink>
         ))}
       </nav>
+      </div>
 
       {/* ── The Archivist ─────────────────────────────────────── */}
 
