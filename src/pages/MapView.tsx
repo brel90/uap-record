@@ -81,6 +81,10 @@ const GRAIN_BG =
   "%3C/svg%3E\")"
 
 function TornImageHover({ imageUrl, title }: { imageUrl: string; title: string }) {
+  // If the image fails to load (404, hotlink block), fall back to the plain
+  // label instead of rendering an empty torn frame.
+  const [failed, setFailed] = useState(false)
+  if (failed) return <div className="globe-label">{title}</div>
   return (
     <div
       style={{
@@ -114,6 +118,7 @@ function TornImageHover({ imageUrl, title }: { imageUrl: string; title: string }
             display: 'block',
             filter: 'grayscale(42%) brightness(0.8) contrast(1.08) sepia(10%)',
           }}
+          onError={() => setFailed(true)}
         />
 
         {/* Vignette — transparent center, dark near torn edges */}
