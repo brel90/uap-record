@@ -21,6 +21,11 @@ const VIDEO_EMBEDS: Record<string, string> = {
   'uss-omaha-sphere':        'https://www.youtube-nocookie.com/embed/aPZM3bgTQ7g',
 }
 
+// ── Touch-device detection (used to suppress hover-only UI) ──
+const isTouchDevice =
+  typeof window !== 'undefined' &&
+  (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
+
 // ── Helpers ───────────────────────────────────────────────
 
 function latLonToXYZ(lat: number, lon: number, r = 1): [number, number, number] {
@@ -46,6 +51,96 @@ function stablePhase(id: string): number {
 
 function isSensorConfirmed(event: Event): boolean {
   return event.tags?.includes('sensor_confirmed') ?? false
+}
+
+// ── Torn-map image hover overlay ──────────────────────────
+//
+// Hand-crafted irregular polygon — each edge zig-zags ±8% to mimic a
+// paper tear. Points run: top (left→right) → right (top→bottom) →
+// bottom (right→left) → left (bottom→top).
+const TORN_POLYGON =
+  '3% 9%,7% 3%,11% 9%,15% 2%,19% 8%,23% 2%,27% 7%,31% 3%,' +
+  '35% 9%,39% 2%,43% 7%,47% 3%,51% 9%,55% 2%,59% 7%,63% 3%,' +
+  '67% 9%,71% 2%,75% 8%,79% 3%,83% 9%,87% 3%,91% 8%,95% 2%,98% 7%,' +
+  '100% 14%,97% 20%,100% 26%,97% 32%,100% 38%,97% 44%,' +
+  '100% 50%,97% 56%,100% 62%,97% 68%,100% 74%,97% 80%,100% 86%,97% 92%,' +
+  '94% 98%,90% 94%,86% 98%,82% 94%,78% 99%,74% 94%,70% 98%,' +
+  '66% 94%,62% 99%,58% 94%,54% 98%,50% 94%,46% 99%,42% 94%,' +
+  '38% 98%,34% 94%,30% 99%,26% 94%,22% 98%,18% 94%,14% 98%,' +
+  '10% 94%,6% 98%,2% 93%,' +
+  '0% 87%,3% 81%,0% 75%,3% 69%,0% 63%,3% 57%,' +
+  '0% 51%,3% 45%,0% 39%,3% 33%,0% 27%,3% 21%,0% 15%'
+
+// Inline SVG noise tile for the film-grain overlay
+const GRAIN_BG =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' " +
+  "width='180' height='130'%3E%3Cfilter id='n'%3E" +
+  "%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' " +
+  "stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E" +
+  "%3C/filter%3E%3Crect width='180' height='130' filter='url(%23n)'/%3E" +
+  "%3C/svg%3E\")"
+
+function TornImageHover({ imageUrl, title }: { imageUrl: string; title: string }) {
+  return (
+    <div
+      style={{
+        pointerEvents: 'none',
+        transform: 'translate(18px, -50%)',
+        // drop-shadow bleeds outside the clip boundary → dark halo around the
+        // jagged edges, creating the illusion of depth through a tear.
+        filter:
+          'drop-shadow(0 0 22px rgba(0,0,0,0.99)) ' +
+          'drop-shadow(0 0 7px rgba(0,0,0,0.88))',
+      }}
+    >
+      {/* Torn-edge clipping container */}
+      <div
+        style={{
+          width: 234,
+          height: 158,
+          clipPath: `polygon(${TORN_POLYGON})`,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Archival image treatment: desaturated, slightly dark, faint warm tone */}
+        <img
+          src={imageUrl}
+          alt={title}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            filter: 'grayscale(42%) brightness(0.8) contrast(1.08) sepia(10%)',
+          }}
+        />
+
+        {/* Vignette — transparent center, dark near torn edges */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(ellipse 60% 55% at 50% 50%, ' +
+              'transparent 25%, rgba(0,0,0,0.62) 100%)',
+          }}
+        />
+
+        {/* Film grain overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: GRAIN_BG,
+            backgroundSize: 'cover',
+            opacity: 0.1,
+            mixBlendMode: 'overlay',
+          }}
+        />
+      </div>
+    </div>
+  )
 }
 
 // ── Graticule ─────────────────────────────────────────────
@@ -265,10 +360,15 @@ function EventMarker({
         </mesh>
       )}
 
-      {/* Hover label */}
+      {/* Hover UI — torn image overlay on desktop when image_url present,
+           plain label otherwise. Mobile tap keeps its existing EventPanel. */}
       {isHovered && !isSelected && (
         <Html position={[0, coreSize * 4, 0]} style={{ pointerEvents: 'none' }}>
-          <div className="globe-label">{event.title}</div>
+          {event.image_url && !isTouchDevice ? (
+            <TornImageHover imageUrl={event.image_url} title={event.title} />
+          ) : (
+            <div className="globe-label">{event.title}</div>
+          )}
         </Html>
       )}
     </group>
