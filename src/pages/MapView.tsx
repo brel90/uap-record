@@ -21,10 +21,13 @@ const VIDEO_EMBEDS: Record<string, string> = {
   'uss-omaha-sphere':        'https://www.youtube-nocookie.com/embed/aPZM3bgTQ7g',
 }
 
-// ── Touch-device detection (used to suppress hover-only UI) ──
-const isTouchDevice =
+// ── Hover-capability detection (used to suppress hover-only UI) ──
+// True when the primary input is a fine pointer that can hover (mouse or
+// trackpad). Checking maxTouchPoints instead would wrongly disable hover UI
+// on any touch-capable laptop, even when the user is on a mouse.
+const canHover =
   typeof window !== 'undefined' &&
-  (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
+  window.matchMedia('(hover: hover) and (pointer: fine)').matches
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -369,7 +372,7 @@ function EventMarker({
            plain label otherwise. Mobile tap keeps its existing EventPanel. */}
       {isHovered && !isSelected && (
         <Html position={[0, coreSize * 4, 0]} style={{ pointerEvents: 'none' }}>
-          {event.image_url && !isTouchDevice ? (
+          {event.image_url && canHover ? (
             <TornImageHover imageUrl={event.image_url} title={event.title} />
           ) : (
             <div className="globe-label">{event.title}</div>
