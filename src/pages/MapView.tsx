@@ -56,96 +56,41 @@ function isSensorConfirmed(event: Event): boolean {
   return event.tags?.includes('sensor_confirmed') ?? false
 }
 
-// ── Torn-map image hover overlay ──────────────────────────
+// ── Holographic image hover overlay ───────────────────────
 //
-// Hand-crafted irregular polygon — each edge zig-zags ±8% to mimic a
-// paper tear. Points run: top (left→right) → right (top→bottom) →
-// bottom (right→left) → left (bottom→top).
-const TORN_POLYGON =
-  '3% 9%,7% 3%,11% 9%,15% 2%,19% 8%,23% 2%,27% 7%,31% 3%,' +
-  '35% 9%,39% 2%,43% 7%,47% 3%,51% 9%,55% 2%,59% 7%,63% 3%,' +
-  '67% 9%,71% 2%,75% 8%,79% 3%,83% 9%,87% 3%,91% 8%,95% 2%,98% 7%,' +
-  '100% 14%,97% 20%,100% 26%,97% 32%,100% 38%,97% 44%,' +
-  '100% 50%,97% 56%,100% 62%,97% 68%,100% 74%,97% 80%,100% 86%,97% 92%,' +
-  '94% 98%,90% 94%,86% 98%,82% 94%,78% 99%,74% 94%,70% 98%,' +
-  '66% 94%,62% 99%,58% 94%,54% 98%,50% 94%,46% 99%,42% 94%,' +
-  '38% 98%,34% 94%,30% 99%,26% 94%,22% 98%,18% 94%,14% 98%,' +
-  '10% 94%,6% 98%,2% 93%,' +
-  '0% 87%,3% 81%,0% 75%,3% 69%,0% 63%,3% 57%,' +
-  '0% 51%,3% 45%,0% 39%,3% 33%,0% 27%,3% 21%,0% 15%'
-
-// Inline SVG noise tile for the film-grain overlay
-const GRAIN_BG =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' " +
-  "width='180' height='130'%3E%3Cfilter id='n'%3E" +
-  "%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' " +
-  "stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E" +
-  "%3C/filter%3E%3Crect width='180' height='130' filter='url(%23n)'/%3E" +
-  "%3C/svg%3E\")"
-
-function TornImageHover({ imageUrl, title }: { imageUrl: string; title: string }) {
-  // If the image fails to load (404, hotlink block), fall back to the plain
-  // label instead of rendering an empty torn frame.
+// A HUD-style projection that materializes beside the marker: angled
+// clipped panel, thin glowing cyan rim (pulled from the globe's
+// #4488cc/#2a5a7a blues), scanline overlay, and a brief initializing
+// flicker. Layout/animation lives in map.css under .holo-*.
+function HoloImageHover({ event }: { event: Event }) {
+  // If the image fails to load (404, hotlink block), fall back to the
+  // plain label instead of projecting an empty panel.
   const [failed, setFailed] = useState(false)
-  if (failed) return <div className="globe-label">{title}</div>
+  if (failed || !event.image_url) return <div className="globe-label">{event.title}</div>
+  const date = formatDate(event)
   return (
-    <div
-      style={{
-        pointerEvents: 'none',
-        transform: 'translate(18px, -50%)',
-        // drop-shadow bleeds outside the clip boundary → dark halo around the
-        // jagged edges, creating the illusion of depth through a tear.
-        filter:
-          'drop-shadow(0 0 22px rgba(0,0,0,0.99)) ' +
-          'drop-shadow(0 0 7px rgba(0,0,0,0.88))',
-      }}
-    >
-      {/* Torn-edge clipping container */}
-      <div
-        style={{
-          width: 234,
-          height: 158,
-          clipPath: `polygon(${TORN_POLYGON})`,
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Archival image treatment: desaturated, slightly dark, faint warm tone */}
-        <img
-          src={imageUrl}
-          alt={title}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            filter: 'grayscale(42%) brightness(0.8) contrast(1.08) sepia(10%)',
-          }}
-          onError={() => setFailed(true)}
-        />
-
-        {/* Vignette — transparent center, dark near torn edges */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(ellipse 60% 55% at 50% 50%, ' +
-              'transparent 25%, rgba(0,0,0,0.62) 100%)',
-          }}
-        />
-
-        {/* Film grain overlay */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: GRAIN_BG,
-            backgroundSize: 'cover',
-            opacity: 0.1,
-            mixBlendMode: 'overlay',
-          }}
-        />
+    <div className="holo-wrap">
+      <div className="holo-scale">
+        {/* Outer = glowing rim; inner = dark panel, 1px smaller, same clip */}
+        <div className="holo-panel">
+          <div className="holo-panel-inner">
+            <img
+              className="holo-img"
+              src={event.image_url}
+              alt={event.title}
+              onError={() => setFailed(true)}
+            />
+            {/* Soft vignette over the image only */}
+            <div className="holo-vignette" />
+            {/* Scanlines + faint vertical grid across the whole panel */}
+            <div className="holo-scanlines" />
+            {/* HUD readout caption */}
+            <div className="holo-caption">
+              <span className="holo-caption-title">{event.title}</span>
+              {date && <span className="holo-caption-date">{date}</span>}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -368,12 +313,12 @@ function EventMarker({
         </mesh>
       )}
 
-      {/* Hover UI — torn image overlay on desktop when image_url present,
-           plain label otherwise. Mobile tap keeps its existing EventPanel. */}
+      {/* Hover UI — holographic image overlay on desktop when image_url
+           present, plain label otherwise. Mobile tap keeps EventPanel. */}
       {isHovered && !isSelected && (
         <Html position={[0, coreSize * 4, 0]} style={{ pointerEvents: 'none' }}>
           {event.image_url && canHover ? (
-            <TornImageHover imageUrl={event.image_url} title={event.title} />
+            <HoloImageHover event={event} />
           ) : (
             <div className="globe-label">{event.title}</div>
           )}

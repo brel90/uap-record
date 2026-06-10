@@ -85,6 +85,128 @@
   transform: translate(10px, -50%);
 }
 
+/* ── Holographic hover overlay (inside Three.js Html) ───── */
+/* Accent pulled from the globe palette (#4488cc lighting /
+   #2a5a7a continents) → cyan rgba(120, 210, 255, *). */
+
+.holo-wrap {
+  pointer-events: none;
+  transform: translate(20px, -50%);
+  /* drop-shadow follows the clip-path → soft cyan projection glow */
+  filter:
+    drop-shadow(0 0 16px rgba(86, 180, 235, 0.30))
+    drop-shadow(0 0 4px rgba(120, 210, 255, 0.45));
+}
+
+/* Scale/fade carrier — kept separate so the materialize transform
+   doesn't fight .holo-wrap's positioning translate. */
+.holo-scale {
+  transform-origin: 0% 50%;
+  animation: holo-in 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.0) both;
+}
+
+/* Outer panel = thin glowing rim. The inner panel reuses the same
+   clip polygon on a box shrunk by 1px, leaving the rim visible. */
+.holo-panel {
+  --holo-clip: polygon(
+    16px 0, calc(100% - 6px) 0, 100% 12px,
+    100% calc(100% - 22px), calc(100% - 16px) 100%,
+    8px 100%, 0 calc(100% - 10px), 0 16px
+  );
+  width: 248px;
+  clip-path: var(--holo-clip);
+  background: rgba(120, 210, 255, 0.55);
+  animation: holo-flicker 0.5s linear 1;
+}
+
+.holo-panel-inner {
+  margin: 1px;
+  clip-path: var(--holo-clip);
+  position: relative;
+  overflow: hidden;
+  background: rgba(4, 12, 24, 0.88);
+}
+
+.holo-img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  /* Archival-but-projected: desaturated, dimmed, pushed toward cyan */
+  filter: grayscale(45%) sepia(30%) hue-rotate(165deg)
+          saturate(1.25) brightness(0.85) contrast(1.06);
+}
+
+.holo-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background: radial-gradient(
+    ellipse 62% 58% at 50% 50%,
+    transparent 30%, rgba(2, 8, 18, 0.55) 100%
+  );
+}
+
+.holo-scanlines {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(140, 220, 255, 0.07) 0 1px, transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(140, 220, 255, 0.03) 0 1px, transparent 1px 24px
+    );
+  mix-blend-mode: screen;
+}
+
+.holo-caption {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 12px 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  border-top: 1px solid rgba(120, 210, 255, 0.18);
+  background: rgba(8, 20, 36, 0.6);
+}
+
+.holo-caption-title {
+  color: rgba(160, 222, 250, 0.78);
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.holo-caption-date {
+  color: rgba(160, 222, 250, 0.42);
+  flex-shrink: 0;
+}
+
+@keyframes holo-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Brief initialization flicker, like the projector locking on */
+@keyframes holo-flicker {
+  0%   { opacity: 0.4; }
+  14%  { opacity: 0.95; }
+  24%  { opacity: 0.45; }
+  36%  { opacity: 1; }
+  50%  { opacity: 0.7; }
+  62%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
 /* ── Event detail panel ──────────────────────────────────── */
 .globe-panel {
   position: absolute;
