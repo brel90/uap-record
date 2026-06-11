@@ -283,8 +283,8 @@ export default function Archivist({ onClose }: Props) {
             </div>
           ))}
 
-          {/* Loading indicator */}
-          {isLoading && (
+          {/* Loading indicator — hide once the streaming message starts appearing */}
+          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
             <div style={{ display: 'flex', gap: '4px', padding: '12px 0' }}>
               {[0, 1, 2].map(i => (
                 <div
