@@ -67,6 +67,10 @@ export function useArchivist() {
       setMessages(prev => [...prev, userMsg])
       setIsLoading(true)
 
+      // Tracks the in-progress assistant message so the catch block can update
+      // it with an error rather than appending a second bubble.
+      let streamingMsgId: string | null = null
+
       try {
         // Step 1: Search corpus for relevant events via full-text search.
         // Wrapped in try-catch — the fts column is optional; if absent we
@@ -127,7 +131,8 @@ RULES:
 6. The suppression record is as important as the phenomenon record. Don't shy away from it.
 7. Keep responses focused — 3-5 paragraphs maximum unless the question genuinely requires more depth.`
 
-        // Step 4: Call the Vercel proxy (keeps API key server-side)
+        // Step 4: Call the Vercel proxy (keeps API key server-side).
+        // The proxy forces stream:true and returns text/event-stream.
         const response = await fetch('/api/anthropic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -144,54 +149,92 @@ RULES:
           }),
         })
 
-        // response.json() can throw SyntaxError if the endpoint returned HTML
-        // (e.g. the SPA rewrite intercepted /api/anthropic).
-        let data: Record<string, unknown>
-        try {
-          data = await response.json()
-        } catch {
-          throw new Error(
-            `Could not parse response from /api/anthropic (status ${response.status}). ` +
-            `The proxy may not be deployed or the SPA rewrite is intercepting it.`,
-          )
+        if (!response.ok || !response.body) {
+          let errMsg = `API error ${response.status}`
+          try {
+            const errData = await response.json() as Record<string, unknown>
+            const anthropicMsg =
+              typeof errData.error === 'object' && errData.error !== null
+                ? (errData.error as Record<string, unknown>).message
+                : errData.error
+            errMsg = String(anthropicMsg ?? errMsg)
+          } catch { /* ignore parse failure */ }
+          throw new Error(errMsg)
         }
 
-        if (!response.ok) {
-          // Anthropic errors come back as { type, error: { type, message } }
-          // Our own proxy errors come back as { error: "string" }
-          const anthropicMsg =
-            typeof data.error === 'object' && data.error !== null
-              ? (data.error as Record<string, unknown>).message
-              : data.error
-          throw new Error(
-            String(anthropicMsg ?? `API error ${response.status}: ${JSON.stringify(data)}`),
-          )
-        }
-
-        const rawText: string = (data.content as Array<{text: string}>)[0].text
-        const citations = parseCitations(rawText, allEvents ?? [])
-        const cleanText = cleanResponse(rawText)
-
+        // Add a placeholder assistant message immediately so the UI updates
+        // as tokens arrive rather than waiting for the full response.
+        const assistantMsgId = crypto.randomUUID()
+        streamingMsgId = assistantMsgId
         setMessages(prev => [
           ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: cleanText,
-            citations: citations.length > 0 ? citations : undefined,
-          },
+          { id: assistantMsgId, role: 'assistant' as const, content: '' },
         ])
+
+        // Read the SSE stream
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let sseBuffer = ''
+        let rawText = ''
+
+        outer: while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          sseBuffer += decoder.decode(value, { stream: true })
+
+          // Split on newlines; last element may be an incomplete line — keep it.
+          const lines = sseBuffer.split('\n')
+          sseBuffer = lines.pop() ?? ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const payload = line.slice(6).trim()
+            if (payload === '[DONE]') break outer
+
+            let event: Record<string, unknown>
+            try { event = JSON.parse(payload) } catch { continue }
+
+            // Anthropic stream event: content_block_delta → text_delta
+            if (
+              event.type === 'content_block_delta' &&
+              (event.delta as Record<string, unknown> | null)?.type === 'text_delta'
+            ) {
+              const chunk = String((event.delta as Record<string, unknown>).text ?? '')
+              rawText += chunk
+              setMessages(prev =>
+                prev.map(m => m.id === assistantMsgId ? { ...m, content: rawText } : m),
+              )
+            }
+          }
+        }
+
+        // Post-process the completed text: parse [[citations]] and strip brackets
+        const citations = parseCitations(rawText, allEvents ?? [])
+        const cleanText = cleanResponse(rawText)
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === assistantMsgId
+              ? { ...m, content: cleanText, citations: citations.length > 0 ? citations : undefined }
+              : m,
+          ),
+        )
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
         console.error('[Archivist] error:', errMsg)
-        setMessages(prev => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: `Error: ${errMsg}`,
-          },
-        ])
+        if (streamingMsgId) {
+          // Update the placeholder bubble in place instead of appending a new one
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === streamingMsgId ? { ...m, content: `Error: ${errMsg}` } : m,
+            ),
+          )
+        } else {
+          setMessages(prev => [
+            ...prev,
+            { id: crypto.randomUUID(), role: 'assistant' as const, content: `Error: ${errMsg}` },
+          ])
+        }
       } finally {
         setIsLoading(false)
       }

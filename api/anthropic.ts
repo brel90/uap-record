@@ -30,9 +30,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).end()
 
   // Rate limit check: 15 requests/hour per IP (sliding window).
-  const { success } = await ratelimit.limit(getClientIp(req))
-  if (!success) {
-    return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' })
+  // Wrapped in try/catch so a Redis connectivity failure fails open rather
+  // than taking down the entire handler.
+  try {
+    const { success } = await ratelimit.limit(getClientIp(req))
+    if (!success) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' })
+    }
+  } catch (err) {
+    console.error('anthropic proxy: rate limit check failed, allowing request:', err)
   }
 
   // ANTHROPIC_API_KEY is the runtime secret set in Vercel dashboard.
@@ -66,15 +72,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(upstream.status).json({ error: text })
     }
 
-    res.status(200)
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Connection', 'keep-alive')
+    // Write status + all headers atomically before the body starts flowing.
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    })
 
     // Pipe the Web ReadableStream → Node Readable → Vercel response
     Readable.fromWeb(upstream.body as import('stream/web').ReadableStream).pipe(res)
   } catch (err) {
     console.error('anthropic proxy error:', err)
-    res.status(500).json({ error: 'proxy request failed' })
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'proxy request failed' })
+    }
   }
 }
