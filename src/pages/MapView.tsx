@@ -13,8 +13,8 @@ import type { Event } from '@/lib/types'
 // ── DoD-confirmed video embeds (youtube-nocookie, no API key needed) ─────────
 
 const VIDEO_EMBEDS: Record<string, string> = {
-  // AARO/DoD official channel — USS Nimitz FLIR1 "Tic Tac"
-  'nimitz-tic-tac-incident': 'https://www.youtube-nocookie.com/embed/lvvNd3htWd0',
+  // To The Stars Academy — original public upload of the official USG FLIR1 "Tic Tac" footage
+  'nimitz-tic-tac-incident': 'https://www.youtube-nocookie.com/embed/6rWOtrke0HY',
   // First official USG public release — Gimbal (Jan 2015)
   'gimbal-gofast-videos':    'https://www.youtube-nocookie.com/embed/tf1uLwUTDA0',
   // NewsNation — USS Omaha sphere, Pentagon-confirmed (July 2019)
