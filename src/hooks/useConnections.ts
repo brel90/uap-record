@@ -11,6 +11,7 @@ export interface RawEvent {
   summary: string | null
   date_start: string | null
   date_year_start: number | null
+  date_precision: string | null
 }
 
 export interface RawConnection {
@@ -33,7 +34,7 @@ export function useConnections() {
       // Query 1: events
       const eventsRes = await supabase
         .from('events')
-        .select('id, title, era, tier, slug, parent_event_id, summary, date_start, date_year_start')
+        .select('id, title, era, tier, slug, parent_event_id, summary, date_start, date_year_start, date_precision')
 
       if (eventsRes.error) {
         console.error('[useConnections] events query failed:', eventsRes.error)

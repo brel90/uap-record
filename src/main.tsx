@@ -1,12 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 import Timeline from './pages/Timeline.tsx'
 import MapView from './pages/MapView.tsx'
-import Graph from './pages/Graph.tsx'
 import Search from './pages/Search.tsx'
 import EventDetail from './pages/EventDetail.tsx'
 import EntityDetailPage from './pages/EntityDetailPage.tsx'
@@ -32,7 +31,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<App />}>
             <Route index element={<Timeline />} />
             <Route path="map" element={<MapView />} />
-            <Route path="graph" element={<Graph />} />
+            <Route path="graph" element={<Navigate to="/" replace />} />
             <Route path="search" element={<Search />} />
             <Route path="event/:slug" element={<EventDetail />} />
             <Route path="entity/:id" element={<EntityDetailPage />} />

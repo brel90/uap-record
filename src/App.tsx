@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { NavLink, Outlet, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
-import { Clock, Map, GitFork, Search, Info, GraduationCap, Globe, Network, BookOpen, Archive } from 'lucide-react'
+import { NavLink, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
+import { Clock, Map, Search, Info, GraduationCap, Globe, BookOpen, Archive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEvents } from '@/hooks/useEvents'
 import { COLLECTIONS } from '@/lib/constants'
@@ -11,7 +11,6 @@ import Archivist from '@/components/Archivist'
 const navItems = [
   { to: '/', label: 'Timeline', icon: Clock, end: true },
   { to: '/map', label: 'Map', icon: Map, end: false },
-  { to: '/graph', label: 'Graph', icon: GitFork, end: false },
   { to: '/learn', label: 'Learn', icon: GraduationCap, end: false },
   { to: '/search', label: 'Search', icon: Search, end: false },
 ]
@@ -19,7 +18,6 @@ const navItems = [
 const mobileNavItems = [
   { to: '/', label: 'Timeline', icon: Clock, end: true },
   { to: '/map', label: 'Map', icon: Globe, end: false },
-  { to: '/graph', label: 'Graph', icon: Network, end: false },
   { to: '/learn', label: 'Learn', icon: BookOpen, end: false },
   { to: '/search', label: 'Search', icon: Search, end: false },
   { to: '/about', label: 'About', icon: Info, end: false },
@@ -40,8 +38,6 @@ export default function App() {
   const [searchParams] = useSearchParams()
   const activeCollection = searchParams.get('collection')
   const [archivistOpen, setArchivistOpen] = useState(false)
-  const location = useLocation()
-  const isGraph = location.pathname === '/graph'
 
   // Full event list for counting — cached, shares query key with Timeline's unfiltered call
   const { data: allEvents = [] } = useEvents()
@@ -251,7 +247,7 @@ export default function App() {
       {!archivistOpen && (
         <button
           onClick={() => setArchivistOpen(true)}
-          className={`fixed bottom-20 md:bottom-6 ${isGraph ? 'left-6' : 'right-6'} z-50 flex items-center gap-2 px-4 py-3 rounded-full text-sm font-mono tracking-wider transition-all`}
+          className="fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full text-sm font-mono tracking-wider transition-all"
           style={{
             background: 'rgba(0,5,20,0.9)',
             border: '1px solid rgba(0,100,255,0.4)',
