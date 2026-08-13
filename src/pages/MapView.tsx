@@ -134,9 +134,9 @@ function Starfield() {
 
 // ── Base sphere + graticule ───────────────────────────────
 
-function GlobeSphere() {
+function GlobeSphere({ meshRef }: { meshRef: React.RefObject<THREE.Mesh | null> }) {
   return (
-    <mesh>
+    <mesh ref={meshRef}>
       <sphereGeometry args={[1, 64, 64]} />
       <meshPhongMaterial color="#0c1c30" emissive="#0a1830" emissiveIntensity={0.35} specular="#2a6a9a" shininess={14} />
     </mesh>
@@ -250,10 +250,11 @@ function Atmosphere() {
 // ── Event marker ──────────────────────────────────────────
 
 function GlobeMarker({
-  group, revealedIds, onHover, onMove, onLeave, onClick,
+  group, revealedIds, occludeRef, onHover, onMove, onLeave, onClick,
 }: {
   group: ClusterGroup
   revealedIds: Set<string>
+  occludeRef: React.RefObject<THREE.Mesh | null>
   onHover: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
   onMove: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
   onLeave: () => void
@@ -304,7 +305,7 @@ function GlobeMarker({
       </mesh>
 
       {group.isCluster && (
-        <Html position={[0, coreSize * 3.4, 0]} center style={{ pointerEvents: 'none' }}>
+        <Html position={[0, coreSize * 3.4, 0]} center occlude={[occludeRef as React.RefObject<THREE.Object3D>]} style={{ pointerEvents: 'none' }}>
           <span className="m2-cluster-count">{revealed.length}</span>
         </Html>
       )}
@@ -331,6 +332,7 @@ function GlobeRig({
   onDragStart: () => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
+  const sphereRef = useRef<THREE.Mesh>(null)
   const animRef = useRef<{ from: THREE.Quaternion; to: THREE.Quaternion; t: number } | null>(null)
   const { camera } = useThree()
 
@@ -368,7 +370,7 @@ function GlobeRig({
       <Starfield />
       <Atmosphere />
       <group ref={groupRef}>
-        <GlobeSphere />
+        <GlobeSphere meshRef={sphereRef} />
         <Graticule />
         <Continents />
         {clusters.map(c => (
@@ -376,6 +378,7 @@ function GlobeRig({
             key={c.key}
             group={c}
             revealedIds={revealedIds}
+            occludeRef={sphereRef}
             onHover={onHoverMarker}
             onMove={onMoveMarker}
             onLeave={onLeaveMarker}
