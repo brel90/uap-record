@@ -79,6 +79,25 @@ export const COLLECTIONS: Collection[] = [
   { id: 'pursue_releases',   label: 'PURSUE Releases',    filter: { kind: 'tag',  value: 'pursue_release' } },
 ]
 
+// ── DoD-confirmed video embeds (youtube-nocookie, no API key needed) ────────
+// Keyed by event slug — rendered on EventDetail for the handful of events
+// with an official USG-released video.
+
+export const VIDEO_EMBEDS: Record<string, { url: string; caption: string }> = {
+  'nimitz-tic-tac-incident': {
+    url: 'https://www.youtube-nocookie.com/embed/6rWOtrke0HY',
+    caption: 'To The Stars Academy — official USG FLIR1 "Tic Tac" footage',
+  },
+  'gimbal-gofast-videos': {
+    url: 'https://www.youtube-nocookie.com/embed/tf1uLwUTDA0',
+    caption: 'First official USG public release — Gimbal (Jan 2015)',
+  },
+  'uss-omaha-sphere': {
+    url: 'https://www.youtube-nocookie.com/embed/aPZM3bgTQ7g',
+    caption: 'NewsNation — USS Omaha sphere, Pentagon-confirmed (July 2019)',
+  },
+}
+
 export const CONNECTION_TYPE_CONFIG: Record<ConnectionType, { label: string; color: string }> = {
   causal:        { label: 'Causal',        color: '#ff3333' },
   institutional: { label: 'Institutional', color: '#3399ff' },

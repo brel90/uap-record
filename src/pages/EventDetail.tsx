@@ -3,7 +3,7 @@ import { ExternalLink, ArrowLeft } from 'lucide-react'
 import './event-detail.css'
 import { useEvent } from '@/hooks/useEvent'
 import { useEventConnections } from '@/hooks/useEventConnections'
-import { ERA_CONFIG, CONNECTION_TYPE_CONFIG } from '@/lib/constants'
+import { ERA_CONFIG, CONNECTION_TYPE_CONFIG, VIDEO_EMBEDS } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import type { Source, EventEntity, EntityType } from '@/lib/types'
 import type { ConnectionWithEvent } from '@/hooks/useEventConnections'
@@ -315,6 +315,7 @@ export default function EventDetail() {
   const era = ERA_CONFIG[event.era]
   const date = formatDate(event)
   const tierVariant = event.tier === 1 ? 'filled' : event.tier === 2 ? 'outlined' : 'faint'
+  const video = VIDEO_EMBEDS[event.slug]
 
   const kvItems = [
     { k: 'ERA', v: era.label },
@@ -415,6 +416,25 @@ export default function EventDetail() {
         <div className="ed-body">
           {/* Left column */}
           <div className="ed-left">
+            {video && (
+              <section className="ed-section">
+                <header className="ed-sec-head">
+                  <span className="ed-sec-eyebrow">REC</span>
+                  <h2 className="ed-sec-title">Video Evidence</h2>
+                </header>
+                <div className="ed-video-wrap">
+                  <iframe
+                    className="ed-video-frame"
+                    src={video.url}
+                    title={event.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <p className="ed-video-caption">{video.caption}</p>
+              </section>
+            )}
+
             {event.summary && (
               <section className="ed-section">
                 <header className="ed-sec-head">
