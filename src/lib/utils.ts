@@ -14,6 +14,20 @@ interface DateFields {
   date_precision?: string | null
 }
 
+const COMPACT_MONTHS = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+// Uppercase-month case-file date label, e.g. "JUN 24, 1947" — used by the
+// Timeline and Map pages' hover cards, distinct from formatDate's prose style.
+export function formatDateCompact(event: DateFields): string {
+  if (event.date_start) {
+    const [y, m, d] = event.date_start.split('-')
+    if (event.date_precision === 'day') return `${COMPACT_MONTHS[+m]} ${+d}, ${y}`
+    if (event.date_precision === 'month') return `${COMPACT_MONTHS[+m]} ${y}`
+    return y
+  }
+  return event.date_year_start ? String(event.date_year_start) : ''
+}
+
 export function formatDate(event: DateFields): string {
   if (event.date_start) {
     try {

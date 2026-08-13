@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useConnections } from '@/hooks/useConnections'
 import type { RawEvent, RawConnection } from '@/hooks/useConnections'
 import { ERA_CONFIG, CONNECTION_TYPE_CONFIG } from '@/lib/constants'
+import { formatDateCompact } from '@/lib/utils'
 import type { Era, ConnectionType } from '@/lib/types'
 import './timeline.css'
 
@@ -13,7 +14,6 @@ const PAD = 60
 const CLUSTER_PX = 16
 const WINDOW_YEARS = 14
 
-const MONTHS = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const NEUTRAL_LINE = 'rgba(140,170,200,0.35)'
 
 // ── Types ──────────────────────────────────────────────────
@@ -56,16 +56,6 @@ function hexToRgba(hex: string, a: number): string {
   const g = parseInt(h.slice(2, 4), 16)
   const b = parseInt(h.slice(4, 6), 16)
   return `rgba(${r},${g},${b},${a})`
-}
-
-function fmtDate(e: RawEvent): string {
-  if (e.date_start) {
-    const [y, m, d] = e.date_start.split('-')
-    if (e.date_precision === 'day') return `${MONTHS[+m]} ${+d}, ${y}`
-    if (e.date_precision === 'month') return `${MONTHS[+m]} ${y}`
-    return y
-  }
-  return e.date_year_start ? String(e.date_year_start) : ''
 }
 
 function truncateWords(str: string, max: number): string {
@@ -447,7 +437,7 @@ export default function Timeline() {
             onMouseLeave={scheduleHide}
           >
             <div className="tl2-card-top">
-              <span className="tl2-card-date">{fmtDate(hoveredEvent)}</span>
+              <span className="tl2-card-date">{formatDateCompact(hoveredEvent)}</span>
               <span className="tl2-card-era" style={{ color: ERA_CONFIG[hoveredEvent.era as Era]?.color }}>
                 {ERA_CONFIG[hoveredEvent.era as Era]?.label.toUpperCase()}
               </span>
@@ -494,7 +484,7 @@ export default function Timeline() {
             <div className="tl2-cluster-popup-header">{openCluster.events.length} EVENTS IN THIS CLUSTER</div>
             {[...openCluster.events].sort((a, b) => a.year - b.year).map(e => (
               <div key={e.id} className="tl2-cluster-popup-item" onClick={() => focusEvent(e.id)}>
-                <div className="tl2-cluster-popup-date">{fmtDate(e)}</div>
+                <div className="tl2-cluster-popup-date">{formatDateCompact(e)}</div>
                 <div className="tl2-cluster-popup-title">{truncateWords(e.title, 46)}</div>
               </div>
             ))}

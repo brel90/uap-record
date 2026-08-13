@@ -1,35 +1,19 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Stars, Html } from '@react-three/drei'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import * as topojson from 'topojson-client'
-import { Link } from 'react-router-dom'
 import './map.css'
 import { useEvents } from '@/hooks/useEvents'
 import { ERA_CONFIG } from '@/lib/constants'
-import { formatDate } from '@/lib/utils'
+import { formatDateCompact } from '@/lib/utils'
 import type { Event } from '@/lib/types'
 
-// ── DoD-confirmed video embeds (youtube-nocookie, no API key needed) ─────────
+// ── Constants ─────────────────────────────────────────────
 
-const VIDEO_EMBEDS: Record<string, string> = {
-  // To The Stars Academy — original public upload of the official USG FLIR1 "Tic Tac" footage
-  'nimitz-tic-tac-incident': 'https://www.youtube-nocookie.com/embed/6rWOtrke0HY',
-  // First official USG public release — Gimbal (Jan 2015)
-  'gimbal-gofast-videos':    'https://www.youtube-nocookie.com/embed/tf1uLwUTDA0',
-  // NewsNation — USS Omaha sphere, Pentagon-confirmed (July 2019)
-  'uss-omaha-sphere':        'https://www.youtube-nocookie.com/embed/aPZM3bgTQ7g',
-}
+const CLUSTER_THRESHOLD_DEG = 3.5
 
-// ── Hover-capability detection (used to suppress hover-only UI) ──
-// True when the primary input is a fine pointer that can hover (mouse or
-// trackpad). Checking maxTouchPoints instead would wrongly disable hover UI
-// on any touch-capable laptop, even when the user is on a mouse.
-const canHover =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(hover: hover) and (pointer: fine)').matches
-
-// ── Helpers ───────────────────────────────────────────────
+// ── Geo helpers ───────────────────────────────────────────
 
 function latLonToXYZ(lat: number, lon: number, r = 1): [number, number, number] {
   const phi = (90 - lat) * (Math.PI / 180)
@@ -41,9 +25,20 @@ function latLonToXYZ(lat: number, lon: number, r = 1): [number, number, number] 
   ]
 }
 
-function firstSentence(s: string): string {
-  const m = s.match(/^[^.!?]+[.!?]/)
-  return m ? m[0] : s.slice(0, 120)
+function haversineDeg(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const torad = (d: number) => (d * Math.PI) / 180
+  const dLat = torad(lat2 - lat1)
+  const dLon = torad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(torad(lat1)) * Math.cos(torad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * (180 / Math.PI)
+}
+
+function eventYear(e: Event): number {
+  if (e.date_start) {
+    const parts = e.date_start.split('-')
+    return +parts[0] + (parts[1] ? (+parts[1] - 1) / 12 : 0)
+  }
+  return e.date_year_start ?? 1950
 }
 
 function stablePhase(id: string): number {
@@ -52,93 +47,115 @@ function stablePhase(id: string): number {
   return (h / 0xffff) * Math.PI * 2
 }
 
-function isSensorConfirmed(event: Event): boolean {
-  return event.tags?.includes('sensor_confirmed') ?? false
+// ── Clustering ────────────────────────────────────────────
+
+interface ClusterGroup {
+  key: string
+  events: Event[]
+  avgLat: number
+  avgLon: number
+  isCluster: boolean
 }
 
-// ── Holographic image hover overlay ───────────────────────
-//
-// A HUD-style projection that materializes beside the marker: angled
-// clipped panel, thin glowing cyan rim (pulled from the globe's
-// #4488cc/#2a5a7a blues), scanline overlay, and a brief initializing
-// flicker. Layout/animation lives in map.css under .holo-*.
-function HoloImageHover({ event }: { event: Event }) {
-  // If the image fails to load (404, hotlink block), fall back to the
-  // plain label instead of projecting an empty panel.
-  const [failed, setFailed] = useState(false)
-  if (failed || !event.image_url) return <div className="globe-label">{event.title}</div>
-  const date = formatDate(event)
+function clusterEvents(events: Event[], thresholdDeg: number): ClusterGroup[] {
+  const n = events.length
+  const parent = Array.from({ length: n }, (_, i) => i)
+  const find = (x: number): number => {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x] }
+    return x
+  }
+  const union = (a: number, b: number) => {
+    const ra = find(a), rb = find(b)
+    if (ra !== rb) parent[ra] = rb
+  }
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (haversineDeg(events[i].latitude!, events[i].longitude!, events[j].latitude!, events[j].longitude!) < thresholdDeg) {
+        union(i, j)
+      }
+    }
+  }
+  const groups = new Map<number, Event[]>()
+  for (let i = 0; i < n; i++) {
+    const r = find(i)
+    const list = groups.get(r) ?? []
+    list.push(events[i])
+    groups.set(r, list)
+  }
+  return [...groups.values()].map((groupEvents, idx) => ({
+    key: `g${idx}_${groupEvents[0].id}`,
+    events: groupEvents,
+    avgLat: groupEvents.reduce((s, e) => s + e.latitude!, 0) / groupEvents.length,
+    avgLon: groupEvents.reduce((s, e) => s + e.longitude!, 0) / groupEvents.length,
+    isCluster: groupEvents.length > 1,
+  }))
+}
+
+// ── Starfield ─────────────────────────────────────────────
+
+// Deterministic PRNG (mulberry32) — a fixed seed keeps star placement
+// stable across renders without reaching for the impure Math.random.
+function mulberry32(seed: number) {
+  let a = seed
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function buildStarPositions(): Float32Array {
+  const rand = mulberry32(1337)
+  const count = 2200
+  const pos = new Float32Array(count * 3)
+  for (let i = 0; i < count; i++) {
+    const r = 60 + rand() * 40
+    const th = rand() * Math.PI * 2
+    const ph = Math.acos(2 * rand() - 1)
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th)
+    pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th)
+    pos[i * 3 + 2] = r * Math.cos(ph)
+  }
+  return pos
+}
+
+function Starfield() {
+  const positions = useMemo(() => buildStarPositions(), [])
   return (
-    <div className="holo-wrap">
-      <div className="holo-scale">
-        {/* Outer = glowing rim; inner = dark panel, 1px smaller, same clip */}
-        <div className="holo-panel">
-          <div className="holo-panel-inner">
-            <img
-              className="holo-img"
-              src={event.image_url}
-              alt={event.title}
-              onError={() => setFailed(true)}
-            />
-            {/* Soft vignette over the image only */}
-            <div className="holo-vignette" />
-            {/* Scanlines + faint vertical grid across the whole panel */}
-            <div className="holo-scanlines" />
-            {/* HUD readout caption */}
-            <div className="holo-caption">
-              <span className="holo-caption-title">{event.title}</span>
-              {date && <span className="holo-caption-date">{date}</span>}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <points>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color="#8fb3d6" size={0.35} transparent opacity={0.55} />
+    </points>
   )
 }
 
-// ── Graticule ─────────────────────────────────────────────
+// ── Base sphere + graticule ───────────────────────────────
+
+function GlobeSphere() {
+  return (
+    <mesh>
+      <sphereGeometry args={[1, 64, 64]} />
+      <meshPhongMaterial color="#0c1c30" emissive="#0a1830" emissiveIntensity={0.35} specular="#2a6a9a" shininess={14} />
+    </mesh>
+  )
+}
 
 function buildGraticuleLines(): THREE.Line[] {
-  const material = new THREE.LineBasicMaterial({
-    color: '#1a3a5a',
-    transparent: true,
-    opacity: 0.5,
-    depthWrite: false,
-  })
+  const material = new THREE.LineBasicMaterial({ color: '#1c3a56', transparent: true, opacity: 0.45, depthWrite: false })
   const lines: THREE.Line[] = []
-
-  // Latitude lines every 15 degrees
-  ;[-75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75].forEach(lat => {
+  ;[-60, -30, 0, 30, 60].forEach(lat => {
     const points: THREE.Vector3[] = []
-    for (let lon = 0; lon <= 360; lon += 2) {
-      const phi = (90 - lat) * (Math.PI / 180)
-      const theta = lon * (Math.PI / 180)
-      points.push(new THREE.Vector3(
-        -1.001 * Math.sin(phi) * Math.cos(theta),
-        1.001 * Math.cos(phi),
-        1.001 * Math.sin(phi) * Math.sin(theta),
-      ))
-    }
-    const geometry = new THREE.BufferGeometry().setFromPoints(points)
-    lines.push(new THREE.Line(geometry, material))
+    for (let lon = 0; lon <= 360; lon += 4) points.push(new THREE.Vector3(...latLonToXYZ(lat, lon - 180, 1.001)))
+    lines.push(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material))
   })
-
-  // Longitude lines every 15 degrees
-  for (let lon = 0; lon < 360; lon += 15) {
+  for (let lon = 0; lon < 360; lon += 30) {
     const points: THREE.Vector3[] = []
-    for (let lat = -90; lat <= 90; lat += 2) {
-      const phi = (90 - lat) * (Math.PI / 180)
-      const theta = lon * (Math.PI / 180)
-      points.push(new THREE.Vector3(
-        -1.001 * Math.sin(phi) * Math.cos(theta),
-        1.001 * Math.cos(phi),
-        1.001 * Math.sin(phi) * Math.sin(theta),
-      ))
-    }
-    const geometry = new THREE.BufferGeometry().setFromPoints(points)
-    lines.push(new THREE.Line(geometry, material))
+    for (let lat = -90; lat <= 90; lat += 4) points.push(new THREE.Vector3(...latLonToXYZ(lat, lon - 180, 1.001)))
+    lines.push(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material))
   }
-
   return lines
 }
 
@@ -178,8 +195,8 @@ function buildContinentGeos(topo: any): ContinentGeos {
   const glowPositions: number[] = []
   const features = land.features ?? [land]
   for (const f of features) {
-    geomToSegments(f.geometry, linePositions, 1.006) // continent lines — lifted above glow
-    geomToSegments(f.geometry, glowPositions, 1.003) // glow layer — between graticule and lines
+    geomToSegments(f.geometry, linePositions, 1.006)
+    geomToSegments(f.geometry, glowPositions, 1.003)
   }
   const lineGeo = new THREE.BufferGeometry()
   lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3))
@@ -188,38 +205,24 @@ function buildContinentGeos(topo: any): ContinentGeos {
   return { lineGeo, glowGeo }
 }
 
-// ── Globe ─────────────────────────────────────────────────
-
-function Globe() {
-  const [continentGeos, setContinentGeos] = useState<ContinentGeos | null>(null)
+function Continents() {
+  const [geos, setGeos] = useState<ContinentGeos | null>(null)
   useEffect(() => {
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
       .then(r => r.json())
-      .then(topo => setContinentGeos(buildContinentGeos(topo)))
+      .then(topo => setGeos(buildContinentGeos(topo)))
       .catch(() => {})
   }, [])
+  if (!geos) return null
   return (
-    <group>
-      {/* Layer 1 — globe sphere (r=1.0) */}
-      <mesh>
-        <sphereGeometry args={[1, 64, 64]} />
-        <meshPhongMaterial color="#112244" emissive="#112244" emissiveIntensity={0.25} specular="#2a6a9a" shininess={12} />
-      </mesh>
-      {/* Layer 2 — graticule grid lines (r=1.001) */}
-      <Graticule />
-      {continentGeos && (
-        <>
-          {/* Layer 3 — continent glow (r=1.003): faint blue halo beneath outlines */}
-          <lineSegments geometry={continentGeos.glowGeo}>
-            <lineBasicMaterial color="#1a4a7a" transparent opacity={0.15} linewidth={2} depthWrite={false} />
-          </lineSegments>
-          {/* Layer 4 — continent outlines (r=1.006): lifted above glow for floating effect */}
-          <lineSegments geometry={continentGeos.lineGeo}>
-            <lineBasicMaterial color="#2a5a7a" transparent opacity={0.9} depthWrite={false} />
-          </lineSegments>
-        </>
-      )}
-    </group>
+    <>
+      <lineSegments geometry={geos.glowGeo}>
+        <lineBasicMaterial color="#2a6ea8" transparent opacity={0.18} depthWrite={false} />
+      </lineSegments>
+      <lineSegments geometry={geos.lineGeo}>
+        <lineBasicMaterial color="#5ab4ff" transparent opacity={0.8} depthWrite={false} />
+      </lineSegments>
+    </>
   )
 }
 
@@ -228,17 +231,17 @@ function Globe() {
 function Atmosphere() {
   return (
     <>
-      <mesh scale={1.035}>
+      <mesh scale={1.03}>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#1a4488" transparent opacity={0.13} side={THREE.BackSide} depthWrite={false} />
+        <meshBasicMaterial color="#1a5fa8" transparent opacity={0.16} side={THREE.BackSide} depthWrite={false} />
       </mesh>
-      <mesh scale={1.08}>
+      <mesh scale={1.07}>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#0d2a60" transparent opacity={0.08} side={THREE.BackSide} depthWrite={false} />
+        <meshBasicMaterial color="#0d3a80" transparent opacity={0.09} side={THREE.BackSide} depthWrite={false} />
       </mesh>
-      <mesh scale={1.15}>
+      <mesh scale={1.13}>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#0a2050" transparent opacity={0.18} side={THREE.BackSide} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial color="#0a2a60" transparent opacity={0.14} side={THREE.BackSide} depthWrite={false} />
       </mesh>
     </>
   )
@@ -246,325 +249,392 @@ function Atmosphere() {
 
 // ── Event marker ──────────────────────────────────────────
 
-function EventMarker({
-  event, isHovered, isSelected, onHover, onClick,
+function GlobeMarker({
+  group, revealedIds, onHover, onMove, onLeave, onClick,
 }: {
-  event: Event
-  isHovered: boolean
-  isSelected: boolean
-  onHover: (id: string | null) => void
-  onClick: (event: Event) => void
+  group: ClusterGroup
+  revealedIds: Set<string>
+  onHover: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
+  onMove: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
+  onLeave: () => void
+  onClick: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
 }) {
-  const eraColor = ERA_CONFIG[event.era].color
-  const sensor = isSensorConfirmed(event)
-  const pos = useMemo(() => latLonToXYZ(event.latitude!, event.longitude!, 1.02), [event.latitude, event.longitude])
+  const revealed = useMemo(() => group.events.filter(e => revealedIds.has(e.id)), [group, revealedIds])
   const glowRef = useRef<THREE.Mesh>(null)
-  const phase = useMemo(() => stablePhase(event.id), [event.id])
-
-  const coreSize = event.tier === 1 ? 0.013 : event.tier === 2 ? 0.009 : 0.006
-  const glowSize = coreSize * 2
-  const hasVideo = event.slug in VIDEO_EMBEDS
-
-  // Core color: sensor confirmed → white; visual only → era color
-  const coreColor = isSelected ? '#ffffff' : sensor ? '#ffffff' : eraColor
-  const glowOpacity = isSelected ? 0.6 : sensor ? 0.38 : 0.22
+  const phase = useMemo(() => stablePhase(group.key), [group.key])
 
   useFrame(({ clock }) => {
-    if (!glowRef.current || event.tier > 1) return
+    if (!glowRef.current || group.isCluster) return
     const t = clock.getElapsedTime()
-    const s = 1.125 + 0.125 * Math.sin(t * Math.PI + phase)
-    glowRef.current.scale.setScalar(s)
+    glowRef.current.scale.setScalar(1.15 + 0.15 * Math.sin(t * 1.5 + phase))
   })
+
+  if (revealed.length === 0) return null
+
+  const pos = latLonToXYZ(group.avgLat, group.avgLon, 1.02)
+  const eraColor = group.isCluster ? '#3fc4ff' : ERA_CONFIG[group.events[0].era].color
+  const tier = group.events[0].tier
+  const coreSize = group.isCluster
+    ? 0.015 + Math.min(group.events.length, 10) * 0.0017
+    : tier === 1 ? 0.014 : tier === 2 ? 0.01 : 0.007
+  const glowSize = coreSize * 2
+
+  function handlePointer(fn: (g: ClusterGroup, r: Event[], x: number, y: number) => void) {
+    return (e: ThreeEvent<PointerEvent>) => {
+      e.stopPropagation()
+      fn(group, revealed, e.clientX, e.clientY)
+    }
+  }
 
   return (
     <group position={pos}>
-      {/* Core */}
       <mesh
-        onPointerOver={e => { e.stopPropagation(); onHover(event.id) }}
-        onPointerOut={e => { e.stopPropagation(); onHover(null) }}
-        onClick={e => { e.stopPropagation(); onClick(event) }}
+        onPointerOver={handlePointer(onHover)}
+        onPointerMove={handlePointer(onMove)}
+        onPointerOut={e => { e.stopPropagation(); onLeave() }}
+        onClick={handlePointer(onClick)}
       >
         <sphereGeometry args={[coreSize, 16, 16]} />
-        <meshBasicMaterial color={coreColor} />
+        <meshBasicMaterial color={eraColor} />
       </mesh>
 
-      {/* Glow */}
       <mesh ref={glowRef}>
         <sphereGeometry args={[glowSize, 16, 16]} />
-        <meshBasicMaterial
-          color={eraColor}
-          transparent
-          opacity={glowOpacity}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
+        <meshBasicMaterial color={eraColor} transparent opacity={0.3} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
 
-      {/* Video indicator ring — thin torus for DoD-confirmed video cases */}
-      {hasVideo && (
-        <mesh>
-          <torusGeometry args={[glowSize * 1.55, glowSize * 0.12, 8, 32]} />
-          <meshBasicMaterial
-            color="#ffffff"
-            transparent
-            opacity={isSelected ? 0.75 : 0.45}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
-
-      {/* Hover UI — holographic image overlay on desktop when image_url
-           present, plain label otherwise. Mobile tap keeps EventPanel. */}
-      {isHovered && !isSelected && (
-        <Html position={[0, coreSize * 4, 0]} style={{ pointerEvents: 'none' }}>
-          {event.image_url && canHover ? (
-            <HoloImageHover event={event} />
-          ) : (
-            <div className="globe-label">{event.title}</div>
-          )}
+      {group.isCluster && (
+        <Html position={[0, coreSize * 3.4, 0]} center style={{ pointerEvents: 'none' }}>
+          <span className="m2-cluster-count">{revealed.length}</span>
         </Html>
       )}
     </group>
   )
 }
 
-// ── Orbit controls ────────────────────────────────────────
+// ── Globe rig (rotation-based focus/reset) ────────────────
 
-function GlobeControls({ paused }: { paused: boolean }) {
-  const [interacting, setInteracting] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  return (
-    <OrbitControls
-      enableZoom enablePan={false}
-      minDistance={1.4} maxDistance={5}
-      autoRotate={!interacting && !paused} autoRotateSpeed={0.3}
-      zoomSpeed={0.6} rotateSpeed={0.55}
-      onStart={() => { if (timerRef.current) clearTimeout(timerRef.current); setInteracting(true) }}
-      onEnd={() => { timerRef.current = setTimeout(() => setInteracting(false), 2500) }}
-    />
-  )
-}
-
-// ── Scene ─────────────────────────────────────────────────
-
-function Scene({ events, hoveredId, selectedId, onHover, onSelect }: {
-  events: Event[]
-  hoveredId: string | null
-  selectedId: string | null
-  onHover: (id: string | null) => void
-  onSelect: (event: Event) => void
+function GlobeRig({
+  clusters, revealedIds, focusRequest, resetNonce, paused, controlsRef, onHoverMarker, onMoveMarker, onLeaveMarker, onClickMarker, onDragStart,
+}: {
+  clusters: ClusterGroup[]
+  revealedIds: Set<string>
+  focusRequest: { lat: number; lon: number; id: number } | null
+  resetNonce: number
+  paused: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  controlsRef: React.MutableRefObject<any>
+  onHoverMarker: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
+  onMoveMarker: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
+  onLeaveMarker: () => void
+  onClickMarker: (group: ClusterGroup, revealed: Event[], x: number, y: number) => void
+  onDragStart: () => void
 }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const animRef = useRef<{ from: THREE.Quaternion; to: THREE.Quaternion; t: number } | null>(null)
+  const { camera } = useThree()
+
+  useEffect(() => {
+    if (!focusRequest || !groupRef.current) return
+    const targetVec = new THREE.Vector3(...latLonToXYZ(focusRequest.lat, focusRequest.lon, 1)).normalize()
+    const endQ = new THREE.Quaternion().setFromUnitVectors(targetVec, new THREE.Vector3(0, 0, 1))
+    animRef.current = { from: groupRef.current.quaternion.clone(), to: endQ, t: 0 }
+  }, [focusRequest])
+
+  useEffect(() => {
+    animRef.current = null
+    groupRef.current?.quaternion.identity()
+    camera.position.set(0, 0, 2.6)
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, 0, 0)
+      controlsRef.current.update()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetNonce])
+
+  useFrame((_, delta) => {
+    const anim = animRef.current
+    if (anim && groupRef.current) {
+      anim.t = Math.min(1, anim.t + delta / 0.45)
+      groupRef.current.quaternion.slerpQuaternions(anim.from, anim.to, anim.t)
+      if (anim.t >= 1) animRef.current = null
+    }
+  })
+
   return (
     <>
-      <directionalLight position={[-4, 3, 2]} intensity={0.8} color="#4488cc" />
-      <ambientLight intensity={0.4} color="#112233" />
-      <Stars radius={90} depth={60} count={7000} factor={2} saturation={0} fade speed={0.3} />
-      <Stars radius={90} depth={60} count={3000} factor={5} saturation={0} fade speed={0.3} />
-      <Globe />
+      <ambientLight color="#1a2c44" intensity={1.1} />
+      <directionalLight color="#4aa8ff" intensity={0.9} position={[-4, 3, 2]} />
+      <Starfield />
       <Atmosphere />
-      {events.map(ev => (
-        <EventMarker
-          key={ev.id}
-          event={ev}
-          isHovered={hoveredId === ev.id}
-          isSelected={selectedId === ev.id}
-          onHover={onHover}
-          onClick={onSelect}
-        />
-      ))}
-      <GlobeControls paused={hoveredId !== null || selectedId !== null} />
+      <group ref={groupRef}>
+        <GlobeSphere />
+        <Graticule />
+        <Continents />
+        {clusters.map(c => (
+          <GlobeMarker
+            key={c.key}
+            group={c}
+            revealedIds={revealedIds}
+            onHover={onHoverMarker}
+            onMove={onMoveMarker}
+            onLeave={onLeaveMarker}
+            onClick={onClickMarker}
+          />
+        ))}
+      </group>
+      <OrbitControls
+        ref={controlsRef}
+        enableZoom enablePan={false}
+        minDistance={1.4} maxDistance={5}
+        autoRotate={!paused} autoRotateSpeed={0.35}
+        rotateSpeed={0.55} zoomSpeed={0.6}
+        onStart={onDragStart}
+      />
     </>
   )
 }
 
-// ── Visual filter bar ─────────────────────────────────────
+// ── Card / popup state shapes ─────────────────────────────
 
-type FilterMode = 'all' | 'sensor'
-
-function VisualFilter({ mode, onChange, total, sensorCount }: {
-  mode: FilterMode
-  onChange: (m: FilterMode) => void
-  total: number
-  sensorCount: number
-}) {
-  return (
-    <div className="map-vfilter">
-      <button
-        className={`map-vfilter-btn ${mode === 'all' ? 'active' : ''}`}
-        onClick={() => onChange('all')}
-      >
-        All Visual Evidence
-        <span className="map-vfilter-count">{total}</span>
-      </button>
-      <button
-        className={`map-vfilter-btn ${mode === 'sensor' ? 'active' : ''}`}
-        onClick={() => onChange('sensor')}
-      >
-        Sensor Confirmed
-        <span className="map-vfilter-count">{sensorCount}</span>
-      </button>
-    </div>
-  )
+interface CardData {
+  left: number
+  top: number
+  dateLabel: string
+  eraLabel: string
+  eraColor: string
+  title: string
+  summary: string
 }
 
-// ── Event detail panel ────────────────────────────────────
-
-function renderMedia(event: Event, eraColor: string) {
-  const videoSrc = VIDEO_EMBEDS[event.slug]
-  if (videoSrc) {
-    return (
-      <iframe
-        src={videoSrc}
-        width="100%"
-        style={{ aspectRatio: '16/9', border: 'none', display: 'block' }}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title={event.title}
-      />
-    )
-  }
-
-  const summary = event.summary
-    ? event.summary.split('.')[0].trim() + '.'
-    : null
-
-  return (
-    <div style={{
-      background: 'rgba(0,5,20,0.6)',
-      border: `1px solid ${eraColor}33`,
-      borderLeft: `3px solid ${eraColor}`,
-      padding: '16px',
-      borderRadius: '4px',
-      margin: '0',
-    }}>
-      {summary && (
-        <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
-          {summary}
-        </p>
-      )}
-    </div>
-  )
+interface PopupItem {
+  dateLabel: string
+  title: string
+  onFocus: () => void
 }
 
-function EventPanel({ event, onClose }: { event: Event; onClose: () => void }) {
-  const era = ERA_CONFIG[event.era]
-  const date = formatDate(event)
-  const sensor = isSensorConfirmed(event)
-
-  return (
-    <div className="globe-panel" style={{ '--era': era.color } as React.CSSProperties}>
-      <button className="globe-panel-close" onClick={onClose}>×</button>
-      <div className="globe-panel-stripe" />
-
-      {renderMedia(event, era.color)}
-
-      <div className="globe-panel-inner">
-        {date && <div className="globe-panel-date">{date}</div>}
-        <h2 className="globe-panel-title">{event.title}</h2>
-        <div className="globe-panel-badges">
-          <span className="globe-panel-era" style={{ color: era.color, borderColor: era.color }}>
-            {era.code}
-          </span>
-          <span className="globe-panel-era-label">{era.label}</span>
-          <span className="globe-panel-tier">T{event.tier}</span>
-          {sensor && (
-            <span className="globe-panel-sensor">SENSOR</span>
-          )}
-        </div>
-        {event.summary && (
-          <p className="globe-panel-summary">{firstSentence(event.summary)}</p>
-        )}
-        <Link to={`/event/${event.slug}`} className="globe-panel-link">
-          View full record →
-        </Link>
-      </div>
-    </div>
-  )
+interface PopupData {
+  left: number
+  top: number
+  headerLabel: string
+  items: PopupItem[]
 }
 
-// ── Page ──────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────
 
 export default function MapView() {
-  const { data: allEvents = [], isLoading } = useEvents({ tag: 'visual_evidence' })
-  const [filterMode, setFilterMode] = useState<FilterMode>('all')
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const controlsRef = useRef<any>(null)
 
-  const mappable = useMemo(
-    () => allEvents.filter(e => e.latitude != null && e.longitude != null),
-    [allEvents],
-  )
+  const [sliderEnabled, setSliderEnabled] = useState(true)
+  const [sliderYear, setSliderYear] = useState(1990)
+  const [card, setCard] = useState<CardData | null>(null)
+  const [clusterPopup, setClusterPopup] = useState<PopupData | null>(null)
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const [manualPause, setManualPause] = useState(false)
+  const [focusRequest, setFocusRequest] = useState<{ lat: number; lon: number; id: number } | null>(null)
+  const [resetNonce, setResetNonce] = useState(0)
 
-  const sensorEvents = useMemo(
-    () => mappable.filter(isSensorConfirmed),
-    [mappable],
-  )
+  const { data: allEvents = [], isLoading } = useEvents()
+  const mappable = useMemo(() => allEvents.filter(e => e.latitude != null && e.longitude != null), [allEvents])
 
-  const visible = filterMode === 'sensor' ? sensorEvents : mappable
+  const clusters = useMemo(() => clusterEvents(mappable, CLUSTER_THRESHOLD_DEG), [mappable])
 
-  function handleSelect(ev: Event) {
-    setSelectedEvent(prev => prev?.id === ev.id ? null : ev)
+  const { minYear, maxYear } = useMemo(() => {
+    if (mappable.length === 0) return { minYear: 1945, maxYear: 2025 }
+    const years = mappable.map(eventYear)
+    return {
+      minYear: Math.floor(Math.min(...years) / 5) * 5,
+      maxYear: Math.ceil(Math.max(...years) / 5) * 5,
+    }
+  }, [mappable])
+
+  const activeYear = Math.min(Math.max(sliderYear, minYear), maxYear)
+  const majorCount = useMemo(() => mappable.filter(e => e.tier === 1).length, [mappable])
+
+  const revealedIds = useMemo(() => {
+    const src = sliderEnabled ? mappable.filter(e => eventYear(e) <= activeYear) : mappable.filter(e => e.tier === 1)
+    return new Set(src.map(e => e.id))
+  }, [mappable, sliderEnabled, activeYear])
+
+  function toggleSlider() {
+    setSliderEnabled(v => !v)
+    setCard(null)
+    setClusterPopup(null)
   }
 
-  // Clear selection when filter changes and selected event is not visible
-  const visibleIds = useMemo(() => new Set(visible.map(e => e.id)), [visible])
-  if (selectedEvent && !visibleIds.has(selectedEvent.id)) {
-    setSelectedEvent(null)
+  function onSliderChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSliderYear(+e.target.value)
+  }
+
+  function handleReset() {
+    setManualPause(false)
+    setResetNonce(n => n + 1)
+  }
+
+  function cardFor(e: Event, x: number, y: number): CardData {
+    const eraMeta = ERA_CONFIG[e.era]
+    const left = Math.max(8, Math.min(x + 16, window.innerWidth - 316))
+    const top = Math.max(8, Math.min(y + 16, window.innerHeight - 200))
+    return { left, top, dateLabel: formatDateCompact(e), title: e.title, summary: e.summary || '', eraColor: eraMeta.color, eraLabel: eraMeta.label.toUpperCase() }
+  }
+
+  function handleHoverMarker(group: ClusterGroup, revealed: Event[], x: number, y: number) {
+    if (clusterPopup) return
+    setHoveredKey(group.key)
+    if (group.isCluster) {
+      const left = Math.max(8, Math.min(x + 16, window.innerWidth - 316))
+      const top = Math.max(8, Math.min(y + 16, window.innerHeight - 140))
+      setCard({ left, top, dateLabel: 'CLUSTER', title: `${revealed.length} EVENTS IN THIS REGION`, summary: 'Click to view the list.', eraColor: '#3fc4ff', eraLabel: '' })
+    } else if (revealed[0]) {
+      setCard(cardFor(revealed[0], x, y))
+    }
+  }
+
+  function handleLeaveMarker() {
+    setHoveredKey(null)
+    setCard(null)
+  }
+
+  function focusEvent(e: Event) {
+    if (e.latitude == null || e.longitude == null) return
+    setFocusRequest({ lat: e.latitude, lon: e.longitude, id: Date.now() })
+    setClusterPopup(null)
+    setCard(cardFor(e, window.innerWidth / 2 - 150, window.innerHeight / 2))
+  }
+
+  function handleClickMarker(group: ClusterGroup, revealed: Event[]) {
+    setManualPause(true)
+    if (group.isCluster) {
+      const evs = [...revealed].sort((a, b) => eventYear(a) - eventYear(b))
+      const anchorX = window.innerWidth / 2, anchorY = window.innerHeight / 2
+      const left = Math.max(8, Math.min(anchorX - 130, window.innerWidth - 300))
+      const top = Math.max(8, Math.min(anchorY + 16, window.innerHeight - 300))
+      setCard(null)
+      setClusterPopup({
+        left, top,
+        headerLabel: `${evs.length} EVENTS IN THIS CLUSTER`,
+        items: evs.map(e => ({ dateLabel: formatDateCompact(e), title: e.title, onFocus: () => focusEvent(e) })),
+      })
+    } else if (revealed[0]) {
+      setClusterPopup(null)
+      focusEvent(revealed[0])
+    }
   }
 
   return (
-    <div className="map-root">
-      <div className="tl-topbar">
-        <span>Corpus</span>
-        <span className="tl-topbar-sep">/</span>
-        <span className="tl-topbar-active">Map</span>
-        <span className="tl-topbar-sep">/</span>
-        <span style={{ color: 'rgba(255,255,255,0.25)', fontFamily: 'IBM Plex Mono', fontSize: 10 }}>
-          Visual Evidence
-        </span>
-        {!isLoading && (
-          <>
-            <span className="tl-topbar-sep">/</span>
-            <span style={{ color: 'rgba(255,255,255,0.18)', fontFamily: 'IBM Plex Mono', fontSize: 10 }}>
-              {visible.length} plotted
-            </span>
-          </>
+    <div className="m2-root">
+      {/* Header */}
+      <div className="m2-header">
+        <div className="m2-title-block">
+          <div className="m2-title">UAP EVENT MAP</div>
+          <div className="m2-subtitle">CORPUS TRACKING · {mappable.length} GEOTAGGED RECORDS · {allEvents.length} IN CORPUS</div>
+        </div>
+
+        <div className="m2-divider" />
+
+        <div className="m2-scrubber-group">
+          <span className="m2-scrubber-label">TEMPORAL SCRUBBER</span>
+          <div
+            className="m2-toggle"
+            style={{ background: sliderEnabled ? 'rgba(63,196,255,0.15)' : 'rgba(90,160,255,0.08)' }}
+            onClick={toggleSlider}
+          >
+            <div className="m2-toggle-thumb" style={{ left: sliderEnabled ? 30 : 2 }} />
+          </div>
+          <span className="m2-toggle-state" style={{ color: sliderEnabled ? '#3fc4ff' : '#5a7a9a' }}>
+            {sliderEnabled ? 'ON' : 'OFF'}
+          </span>
+        </div>
+
+        <div className="m2-divider" />
+
+        {sliderEnabled ? (
+          <div className="m2-scrubber-value-row">
+            <span className="m2-year-display">{Math.round(activeYear)}</span>
+            <input
+              type="range"
+              className="m2-range"
+              min={minYear}
+              max={maxYear}
+              step={1}
+              value={activeYear}
+              onChange={onSliderChange}
+            />
+            <span className="m2-range-bounds">{minYear}—{maxYear}</span>
+          </div>
+        ) : (
+          <div className="m2-major-only">SHOWING TIER-1 MAJOR EVENTS ONLY · {majorCount} RECORDS</div>
         )}
       </div>
 
-      <VisualFilter
-        mode={filterMode}
-        onChange={setFilterMode}
-        total={mappable.length}
-        sensorCount={sensorEvents.length}
-      />
+      {/* Globe viewport */}
+      <div className="m2-viewport">
+        {isLoading && <div className="m2-loading">Loading corpus…</div>}
 
-      <div className="map-body">
         <Canvas
-          className="map-canvas"
+          className="m2-canvas"
           camera={{ position: [0, 0, 2.6], fov: 45, near: 0.1, far: 1000 }}
           gl={{ antialias: true, alpha: false }}
-          style={{ background: '#020408' }}
+          style={{ background: '#05070a', cursor: hoveredKey ? 'pointer' : 'grab' }}
         >
-          <Scene
-            events={visible}
-            hoveredId={hoveredId}
-            selectedId={selectedEvent?.id ?? null}
-            onHover={setHoveredId}
-            onSelect={handleSelect}
+          <GlobeRig
+            clusters={clusters}
+            revealedIds={revealedIds}
+            focusRequest={focusRequest}
+            resetNonce={resetNonce}
+            paused={manualPause || hoveredKey !== null}
+            controlsRef={controlsRef}
+            onHoverMarker={handleHoverMarker}
+            onMoveMarker={handleHoverMarker}
+            onLeaveMarker={handleLeaveMarker}
+            onClickMarker={handleClickMarker}
+            onDragStart={() => setManualPause(true)}
           />
         </Canvas>
 
-        {selectedEvent && (
-          <>
-            {/* Transparent overlay — clicking outside the panel closes it */}
-            <div
-              style={{ position: 'absolute', inset: 0, zIndex: 99 }}
-              onClick={() => setSelectedEvent(null)}
-            />
-            <EventPanel event={selectedEvent} onClose={() => setSelectedEvent(null)} />
-          </>
+        <div className="m2-status-chip">
+          <span>GLOBE · 3D</span>
+          <span className="m2-status-sep" />
+          <span>DRAG TO ORBIT · SCROLL TO ZOOM</span>
+          <button className="m2-reset-btn" onClick={handleReset}>RESET</button>
+        </div>
+
+        {card && (
+          <div className="m2-card" style={{ left: card.left, top: card.top }}>
+            <div className="m2-card-top">
+              <span className="m2-card-date">{card.dateLabel}</span>
+              {card.eraLabel && <span className="m2-card-era" style={{ color: card.eraColor }}>{card.eraLabel}</span>}
+            </div>
+            <div className="m2-card-title">{card.title}</div>
+            {card.summary && <div className="m2-card-summary">{card.summary}</div>}
+          </div>
         )}
+
+        {clusterPopup && (
+          <div className="m2-cluster-popup" style={{ left: clusterPopup.left, top: clusterPopup.top }}>
+            <div className="m2-cluster-popup-header">{clusterPopup.headerLabel}</div>
+            {clusterPopup.items.map((it, i) => (
+              <div key={i} className="m2-cluster-popup-item" onClick={it.onFocus}>
+                <div className="m2-cluster-popup-date">{it.dateLabel}</div>
+                <div className="m2-cluster-popup-title">{it.title}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Legend footer */}
+      <div className="m2-footer">
+        <span className="m2-footer-label">ERA</span>
+        {Object.values(ERA_CONFIG).map(e => (
+          <div key={e.label} className="m2-legend-item">
+            <div className="m2-legend-dot" style={{ background: e.color }} />
+            <span className="m2-legend-label">{e.label.toUpperCase()}</span>
+          </div>
+        ))}
+        <div className="m2-spacer" />
+        <span className="m2-hint">CLICK CLUSTERS TO EXPAND · HOVER FOR DETAIL</span>
       </div>
     </div>
   )
