@@ -612,15 +612,18 @@ export default function MapView() {
         )}
 
         {clusterPopup && (
-          <div className="m2-cluster-popup" style={{ left: clusterPopup.left, top: clusterPopup.top }}>
-            <div className="m2-cluster-popup-header">{clusterPopup.headerLabel}</div>
-            {clusterPopup.items.map((it, i) => (
-              <div key={i} className="m2-cluster-popup-item" onClick={it.onFocus}>
-                <div className="m2-cluster-popup-date">{it.dateLabel}</div>
-                <div className="m2-cluster-popup-title">{it.title}</div>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="m2-cluster-popup-overlay" onClick={() => setClusterPopup(null)} />
+            <div className="m2-cluster-popup" style={{ left: clusterPopup.left, top: clusterPopup.top }}>
+              <div className="m2-cluster-popup-header">{clusterPopup.headerLabel}</div>
+              {clusterPopup.items.map((it, i) => (
+                <div key={i} className="m2-cluster-popup-item" onClick={it.onFocus}>
+                  <div className="m2-cluster-popup-date">{it.dateLabel}</div>
+                  <div className="m2-cluster-popup-title">{it.title}</div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

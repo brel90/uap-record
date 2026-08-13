@@ -383,6 +383,12 @@
 }
 
 /* ── Cluster popup ────────────────────────────────────── */
+.tl2-cluster-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+}
+
 .tl2-cluster-popup {
   position: fixed;
   width: 290px;

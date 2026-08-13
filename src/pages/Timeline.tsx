@@ -480,15 +480,18 @@ export default function Timeline() {
         )}
 
         {openCluster && clusterPos && (
-          <div className="tl2-cluster-popup" style={{ left: clusterPos.left, top: clusterPos.top }}>
-            <div className="tl2-cluster-popup-header">{openCluster.events.length} EVENTS IN THIS CLUSTER</div>
-            {[...openCluster.events].sort((a, b) => a.year - b.year).map(e => (
-              <div key={e.id} className="tl2-cluster-popup-item" onClick={() => focusEvent(e.id)}>
-                <div className="tl2-cluster-popup-date">{formatDateCompact(e)}</div>
-                <div className="tl2-cluster-popup-title">{truncateWords(e.title, 46)}</div>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="tl2-cluster-popup-overlay" onClick={() => setClusterOpenKey(null)} />
+            <div className="tl2-cluster-popup" style={{ left: clusterPos.left, top: clusterPos.top }}>
+              <div className="tl2-cluster-popup-header">{openCluster.events.length} EVENTS IN THIS CLUSTER</div>
+              {[...openCluster.events].sort((a, b) => a.year - b.year).map(e => (
+                <div key={e.id} className="tl2-cluster-popup-item" onClick={() => focusEvent(e.id)}>
+                  <div className="tl2-cluster-popup-date">{formatDateCompact(e)}</div>
+                  <div className="tl2-cluster-popup-title">{truncateWords(e.title, 46)}</div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
